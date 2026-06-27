@@ -1,0 +1,172 @@
+{
+ "doctype": "DocType",
+ "name": "API Request",
+ "module": "Frappe K6",
+ "engine": "InnoDB",
+ "naming_rule": "Random",
+ "autoname": "hash",
+ "description": "Saved API request configuration for load testing and validation",
+ "fields": [
+  {
+   "fieldname": "request_name",
+   "fieldtype": "Data",
+   "label": "Request Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "bold": 1
+  },
+  {
+   "fieldname": "collection",
+   "fieldtype": "Link",
+   "label": "Collection",
+   "options": "API Collection",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "col_method",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "method",
+   "fieldtype": "Select",
+   "label": "HTTP Method",
+   "options": "GET\nPOST\nPUT\nPATCH\nDELETE\nOPTIONS\nHEAD",
+   "default": "GET",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "url",
+   "fieldtype": "Data",
+   "label": "Endpoint URL",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "sec_auth",
+   "fieldtype": "Section Break",
+   "label": "Authentication"
+  },
+  {
+   "fieldname": "auth_type",
+   "fieldtype": "Select",
+   "label": "Auth Type",
+   "options": "None\nBasic Auth\nBearer Token\nAPI Key\nOAuth 2.0\nJWT Token\nCustom Header\nSession (Frappe Login)",
+   "default": "None"
+  },
+  {
+   "fieldname": "auth_config_json",
+   "fieldtype": "Code",
+   "label": "Auth Config (JSON)",
+   "options": "JSON",
+   "description": "JSON object with auth credentials. Format depends on auth type."
+  },
+  {
+   "fieldname": "sec_request",
+   "fieldtype": "Section Break",
+   "label": "Request"
+  },
+  {
+   "fieldname": "headers_json",
+   "fieldtype": "Code",
+   "label": "Headers (JSON)",
+   "options": "JSON",
+   "description": "Array of {key, value, enabled} objects"
+  },
+  {
+   "fieldname": "params_json",
+   "fieldtype": "Code",
+   "label": "Query Params (JSON)",
+   "options": "JSON",
+   "description": "Array of {key, value, enabled} objects"
+  },
+  {
+   "fieldname": "path_params_json",
+   "fieldtype": "Code",
+   "label": "Path Params (JSON)",
+   "options": "JSON",
+   "description": "Object of {paramName: value} for URL path substitution"
+  },
+  {
+   "fieldname": "body_type",
+   "fieldtype": "Select",
+   "label": "Body Type",
+   "options": "none\njson\nxml\ntext\nhtml\nform-data\nurlencoded",
+   "default": "none"
+  },
+  {
+   "fieldname": "body_content",
+   "fieldtype": "Code",
+   "label": "Request Body",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "sec_variables",
+   "fieldtype": "Section Break",
+   "label": "Variables & Validation"
+  },
+  {
+   "fieldname": "variables_json",
+   "fieldtype": "Code",
+   "label": "Variables (JSON)",
+   "options": "JSON",
+   "description": "Array of {key, value, scope} — scope: local/global/env"
+  },
+  {
+   "fieldname": "expected_status",
+   "fieldtype": "Int",
+   "label": "Expected Status Code",
+   "default": 200
+  },
+  {
+   "fieldname": "response_time_threshold_ms",
+   "fieldtype": "Int",
+   "label": "Response Time Threshold (ms)",
+   "default": 2000,
+   "description": "Mark as failed if response exceeds this many milliseconds"
+  },
+  {
+   "fieldname": "assertions_json",
+   "fieldtype": "Code",
+   "label": "Assertions (JSON)",
+   "options": "JSON",
+   "description": "Array of {type, path, operator, value} assertion objects"
+  },
+  {
+   "fieldname": "sec_response",
+   "fieldtype": "Section Break",
+   "label": "Last Response (read-only)"
+  },
+  {
+   "fieldname": "last_response_json",
+   "fieldtype": "Code",
+   "label": "Last Response",
+   "options": "JSON",
+   "read_only": 1,
+   "description": "Populated automatically when you send a test request"
+  }
+ ],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "read": 1,
+   "role": "All",
+   "write": 1
+  }
+ ],
+ "title_field": "request_name",
+ "track_changes": 0
+}

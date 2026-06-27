@@ -1,0 +1,73 @@
+{
+ "actions": [],
+ "autoname": "field:test_name",
+ "creation": "2024-06-26 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "test_name", "description", "column_break_a",
+  "scenario_type", "status",
+  "section_load",
+  "virtual_users", "duration", "think_time",
+  "column_break_b",
+  "ramp_up_time", "ramp_down_time", "max_vus",
+  "section_endpoints",
+  "endpoints",
+  "section_results",
+  "last_run", "last_run_status"
+ ],
+ "fields": [
+  {"fieldname": "test_name", "fieldtype": "Data", "label": "Test Name", "reqd": 1, "in_list_view": 1, "bold": 1},
+  {"fieldname": "description", "fieldtype": "Small Text", "label": "Description"},
+  {"fieldname": "column_break_a", "fieldtype": "Column Break"},
+  {
+   "fieldname": "scenario_type",
+   "fieldtype": "Select",
+   "label": "Scenario Type",
+   "options": "smoke\nload\nstress\nspike\nsoak\ncustom",
+   "default": "load",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Draft\nReady\nRunning\nCompleted\nFailed",
+   "default": "Draft",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {"fieldname": "section_load", "fieldtype": "Section Break", "label": "Load Configuration"},
+  {"fieldname": "virtual_users", "fieldtype": "Int", "label": "Virtual Users (VUs)", "default": 10, "reqd": 1},
+  {"fieldname": "duration", "fieldtype": "Data", "label": "Duration", "default": "5m", "reqd": 1, "description": "e.g. 30s, 5m, 1h"},
+  {"fieldname": "think_time", "fieldtype": "Float", "label": "Think Time (sec)", "default": 1.0},
+  {"fieldname": "column_break_b", "fieldtype": "Column Break"},
+  {"fieldname": "ramp_up_time", "fieldtype": "Data", "label": "Ramp Up Time", "default": "1m"},
+  {"fieldname": "ramp_down_time", "fieldtype": "Data", "label": "Ramp Down Time", "default": "30s"},
+  {"fieldname": "max_vus", "fieldtype": "Int", "label": "Max VUs (Stress/Spike)", "default": 100},
+  {"fieldname": "section_endpoints", "fieldtype": "Section Break", "label": "API Endpoints"},
+  {"fieldname": "endpoints", "fieldtype": "Table", "label": "Endpoints", "options": "Load Test Endpoint"},
+  {"fieldname": "section_results", "fieldtype": "Section Break", "label": "Last Run"},
+  {"fieldname": "last_run", "fieldtype": "Link", "label": "Last Run", "options": "Load Test Run", "read_only": 1},
+  {"fieldname": "last_run_status", "fieldtype": "Data", "label": "Last Run Status", "read_only": 1}
+ ],
+ "links": [],
+ "modified": "2024-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "Load Test Config",
+ "naming_rule": "By fieldname",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1,
+   "print": 1, "read": 1, "report": 1, "role": "System Manager",
+   "share": 1, "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "track_changes": 1
+}

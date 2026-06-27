@@ -1,0 +1,217 @@
+<div class="k6-monitor-wrap">
+
+  <!-- ── TOP NAV ─────────────────────────────────────────── -->
+  <div class="k6-topbar">
+    <div class="k6-brand">
+      <span class="k6-logo">⚡</span>
+      <span class="k6-title">K6 Performance Monitor</span>
+      <span class="k6-badge" id="k6-live-badge">● LIVE</span>
+    </div>
+    <div class="k6-tabs">
+      <button class="k6-tab active" data-tab="dashboard">📊 Dashboard</button>
+      <button class="k6-tab" data-tab="loadtest">🚀 Load Tests</button>
+      <button class="k6-tab" data-tab="builder">🔧 Test Builder</button>
+      <button class="k6-tab" data-tab="history">📋 History</button>
+    </div>
+    <div class="k6-topbar-right">
+      <span class="k6-refresh-info" id="k6-last-refresh">–</span>
+      <button class="btn btn-xs btn-default" id="k6-refresh-btn" title="Refresh now">↺</button>
+    </div>
+  </div>
+
+  <!-- ── DASHBOARD TAB ─────────────────────────────────────── -->
+  <div class="k6-tab-content active" id="tab-dashboard">
+
+    <!-- System Metrics Row -->
+    <div class="k6-section-label">🖥 Infrastructure Health</div>
+    <div class="k6-cards-row" id="sys-cards">
+      <div class="k6-card" id="card-cpu">
+        <div class="k6-card-icon">⚙️</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">CPU Usage</div>
+          <div class="k6-card-value" id="val-cpu">–</div>
+          <div class="k6-progress"><div class="k6-progress-bar cpu-bar" id="bar-cpu"></div></div>
+        </div>
+      </div>
+      <div class="k6-card" id="card-mem">
+        <div class="k6-card-icon">🧠</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">Memory Usage</div>
+          <div class="k6-card-value" id="val-mem">–</div>
+          <div class="k6-card-sub" id="sub-mem">–</div>
+          <div class="k6-progress"><div class="k6-progress-bar mem-bar" id="bar-mem"></div></div>
+        </div>
+      </div>
+      <div class="k6-card" id="card-disk">
+        <div class="k6-card-icon">💾</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">Disk Usage</div>
+          <div class="k6-card-value" id="val-disk">–</div>
+          <div class="k6-card-sub" id="sub-disk">–</div>
+          <div class="k6-progress"><div class="k6-progress-bar disk-bar" id="bar-disk"></div></div>
+        </div>
+      </div>
+      <div class="k6-card" id="card-redis">
+        <div class="k6-card-icon">⚡</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">Redis</div>
+          <div class="k6-card-value" id="val-redis">–</div>
+          <div class="k6-card-sub" id="sub-redis">–</div>
+        </div>
+      </div>
+      <div class="k6-card" id="card-db">
+        <div class="k6-card-icon">🗄️</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">Database</div>
+          <div class="k6-card-value" id="val-db">–</div>
+          <div class="k6-card-sub" id="sub-db">–</div>
+        </div>
+      </div>
+      <div class="k6-card" id="card-workers">
+        <div class="k6-card-icon">👷</div>
+        <div class="k6-card-body">
+          <div class="k6-card-label">Workers</div>
+          <div class="k6-card-value" id="val-workers">–</div>
+          <div class="k6-card-sub" id="sub-workers">–</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="k6-charts-row">
+      <div class="k6-chart-panel">
+        <div class="k6-chart-title">CPU &amp; Memory History</div>
+        <canvas id="chart-sysmetrics" height="90"></canvas>
+      </div>
+      <div class="k6-chart-panel">
+        <div class="k6-chart-title">Network I/O (MB)</div>
+        <canvas id="chart-network" height="90"></canvas>
+      </div>
+    </div>
+
+    <!-- Active Tests Banner -->
+    <div id="k6-active-banner" class="k6-active-banner" style="display:none">
+      <div class="k6-section-label">🔴 Active Load Test</div>
+      <div class="k6-live-cards">
+        <div class="k6-live-card"><span class="k6-lv-label">RPS</span><span class="k6-lv-val" id="lv-rps">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Avg (ms)</span><span class="k6-lv-val" id="lv-avg">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">P95 (ms)</span><span class="k6-lv-val" id="lv-p95">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Requests</span><span class="k6-lv-val" id="lv-reqs">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Errors</span><span class="k6-lv-val k6-err" id="lv-errs">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">VUs</span><span class="k6-lv-val" id="lv-vus">–</span></div>
+      </div>
+      <div class="k6-chart-panel" style="margin-top:10px">
+        <div class="k6-chart-title">Live: Requests &amp; Response Time</div>
+        <canvas id="chart-live" height="80"></canvas>
+      </div>
+      <div style="margin-top:8px;text-align:right">
+        <button class="btn btn-sm btn-danger" id="btn-stop-active">⏹ Stop Test</button>
+      </div>
+    </div>
+
+  </div><!-- /tab-dashboard -->
+
+  <!-- ── LOAD TESTS TAB ────────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-loadtest">
+    <div class="k6-section-label">🚀 Saved Load Test Configs</div>
+    <div style="margin-bottom:10px">
+      <button class="btn btn-sm btn-primary" id="btn-goto-builder">+ New Test Config</button>
+    </div>
+    <div id="configs-table-wrap">
+      <table class="table table-bordered k6-table">
+        <thead>
+          <tr>
+            <th>Test Name</th><th>Scenario</th><th>VUs</th><th>Duration</th>
+            <th>Status</th><th>Last Run</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="configs-tbody">
+          <tr><td colspan="7" class="text-center text-muted">Loading...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── TEST BUILDER TAB ──────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-builder">
+    <div class="k6-section-label">🔧 Build New Load Test</div>
+    <div class="k6-builder-form">
+
+      <div class="k6-form-row">
+        <div class="k6-form-group">
+          <label>Test Name *</label>
+          <input type="text" class="form-control" id="b-test-name" placeholder="My API Load Test">
+        </div>
+        <div class="k6-form-group">
+          <label>Scenario Type</label>
+          <select class="form-control" id="b-scenario">
+            <option value="smoke">Smoke (1-2 VUs, 1 min — sanity)</option>
+            <option value="load" selected>Load (normal traffic)</option>
+            <option value="stress">Stress (find breaking point)</option>
+            <option value="spike">Spike (sudden burst)</option>
+            <option value="soak">Soak (long endurance)</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="k6-form-row">
+        <div class="k6-form-group">
+          <label>Virtual Users (VUs)</label>
+          <input type="number" class="form-control" id="b-vus" value="10" min="1">
+        </div>
+        <div class="k6-form-group">
+          <label>Duration</label>
+          <input type="text" class="form-control" id="b-duration" value="5m" placeholder="5m, 1h, 30s">
+        </div>
+        <div class="k6-form-group">
+          <label>Ramp Up</label>
+          <input type="text" class="form-control" id="b-ramp-up" value="1m">
+        </div>
+        <div class="k6-form-group">
+          <label>Ramp Down</label>
+          <input type="text" class="form-control" id="b-ramp-down" value="30s">
+        </div>
+        <div class="k6-form-group">
+          <label>Max VUs (Stress/Spike)</label>
+          <input type="number" class="form-control" id="b-max-vus" value="100">
+        </div>
+        <div class="k6-form-group">
+          <label>Think Time (sec)</label>
+          <input type="number" class="form-control" id="b-think" value="1" step="0.1">
+        </div>
+      </div>
+
+      <!-- Endpoints -->
+      <div class="k6-section-label" style="margin-top:20px">API Endpoints</div>
+      <div id="endpoints-list"></div>
+      <button class="btn btn-sm btn-default" id="btn-add-endpoint" style="margin-bottom:16px">
+        + Add Endpoint
+      </button>
+
+      <div style="display:flex;gap:10px;margin-top:10px">
+        <button class="btn btn-primary" id="btn-save-config">💾 Save Config</button>
+        <button class="btn btn-success" id="btn-save-run">💾 Save &amp; Run Now</button>
+        <button class="btn btn-default" id="btn-clear-builder">✕ Clear</button>
+      </div>
+      <div id="builder-msg" style="margin-top:10px"></div>
+    </div>
+  </div>
+
+  <!-- ── HISTORY TAB ───────────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-history">
+    <div class="k6-section-label">📋 Test Run History</div>
+    <table class="table table-bordered k6-table">
+      <thead>
+        <tr>
+          <th>Run</th><th>Config</th><th>Scenario</th><th>Status</th>
+          <th>Started</th><th>Requests</th><th>Errors</th>
+          <th>RPS</th><th>Avg ms</th><th>P95 ms</th>
+        </tr>
+      </thead>
+      <tbody id="history-tbody">
+        <tr><td colspan="10" class="text-center text-muted">Loading...</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /k6-monitor-wrap -->

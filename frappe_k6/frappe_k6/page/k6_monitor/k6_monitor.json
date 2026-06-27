@@ -1,0 +1,14 @@
+{
+ "creation": "2024-06-26 00:00:00.000000",
+ "doctype": "Page",
+ "modified": "2024-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "k6-monitor",
+ "owner": "Administrator",
+ "page_name": "k6-monitor",
+ "restrict_to_domain": "",
+ "roles": [{"role": "System Manager"}],
+ "standard": "Yes",
+ "title": "K6 Monitor"
+}

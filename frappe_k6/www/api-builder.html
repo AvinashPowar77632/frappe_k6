@@ -1,0 +1,622 @@
+{% extends "templates/web.html" %}
+{% block title %}API Builder{% endblock %}
+{% block no_sidebar %}1{% endblock %}
+{% block head_include %}
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#1a1a2e;color:#e2e8f0;font-family:"Inter","Segoe UI",sans-serif;font-size:13px;height:100vh;overflow:hidden}
+.web-header,.navbar,footer.web-footer{display:none!important}
+.container{max-width:100%!important;padding:0!important}
+button{cursor:pointer;font-family:inherit;font-size:13px}
+input,select,textarea{font-family:inherit;font-size:13px}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:#16213e}::-webkit-scrollbar-thumb{background:#334155;border-radius:3px}
+.ab{display:flex;flex-direction:column;height:100vh}
+/* Topbar */
+.ab-top{display:flex;align-items:center;justify-content:space-between;background:#0f0f23;border-bottom:1px solid #1e293b;padding:8px 16px;height:46px;flex-shrink:0}
+.ab-brand{font-weight:700;font-size:14px;color:#f97316;display:flex;align-items:center;gap:6px}
+.ab-brand small{font-size:11px;color:#64748b;font-weight:400}
+.ab-row{display:flex;flex:1;overflow:hidden}
+/* Sidebar */
+.ab-sb{width:230px;min-width:230px;background:#0f172a;border-right:1px solid #1e293b;display:flex;flex-direction:column;overflow:hidden}
+.ab-sb-head{padding:8px 12px;border-bottom:1px solid #1e293b;display:flex;align-items:center;justify-content:space-between}
+.ab-sb-head span{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:#64748b;font-weight:600}
+.ab-col-list{flex:1;overflow-y:auto;padding:4px 0}
+.ab-col-item{border-bottom:1px solid #1e293b}
+.ab-col-hd{display:flex;align-items:center;gap:5px;padding:7px 10px;cursor:pointer;user-select:none}
+.ab-col-hd:hover{background:#1e293b}
+.ab-col-nm{flex:1;font-size:12px;font-weight:600;color:#cbd5e1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab-col-ct{font-size:10px;color:#475569;background:#1e293b;padding:1px 5px;border-radius:8px}
+.ab-col-arr{font-size:10px;color:#475569;transition:transform .2s}
+.ab-col-item.open .ab-col-arr{transform:rotate(90deg)}
+.ab-req-list{display:none;padding:2px 0 4px 14px}
+.ab-col-item.open .ab-req-list{display:block}
+.ab-req-it{display:flex;align-items:center;gap:5px;padding:5px 8px;border-radius:4px;cursor:pointer;margin:1px 4px}
+.ab-req-it:hover{background:#1e293b}
+.ab-req-it.active{background:#1e3a5f}
+.mth{font-size:10px;font-weight:700;min-width:36px;text-align:center;padding:1px 3px;border-radius:3px}
+.mth-GET{color:#22c55e;background:rgba(34,197,94,.12)}
+.mth-POST{color:#f97316;background:rgba(249,115,22,.12)}
+.mth-PUT{color:#3b82f6;background:rgba(59,130,246,.12)}
+.mth-PATCH{color:#a855f7;background:rgba(168,85,247,.12)}
+.mth-DELETE{color:#ef4444;background:rgba(239,68,68,.12)}
+.mth-OPTIONS,.mth-HEAD{color:#64748b;background:rgba(100,116,139,.12)}
+.ab-req-nm{flex:1;font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ab-sb-foot{padding:7px 10px;border-top:1px solid #1e293b;display:flex;gap:6px}
+/* Main */
+.ab-main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+/* URL bar */
+.ab-url-bar{display:flex;align-items:center;gap:8px;padding:8px 14px;border-bottom:1px solid #1e293b;background:#0f172a;flex-shrink:0}
+.ab-method{background:#1e293b;color:#e2e8f0;border:1px solid #334155;border-radius:5px;padding:5px 8px;font-weight:700;min-width:95px;height:34px}
+.ab-url{flex:1;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:5px 10px;height:34px}
+.ab-url:focus{outline:none;border-color:#3b82f6}
+.ab-url::placeholder{color:#475569}
+.btn-send{background:#f97316;color:#fff;border:none;border-radius:5px;padding:5px 18px;font-weight:600;height:34px}
+.btn-send:hover{background:#ea580c}
+.btn-send:disabled{background:#7c3412;cursor:not-allowed}
+.ab-rn{background:transparent;border:none;color:#64748b;font-size:11px;width:150px;padding:2px 5px;border-radius:3px}
+.ab-rn:focus{outline:1px solid #334155;background:#1e293b;color:#e2e8f0}
+/* Split */
+.ab-split{display:flex;flex-direction:column;flex:1;overflow:hidden}
+.ab-req-panel{flex:1;display:flex;flex-direction:column;overflow:hidden;border-bottom:2px solid #1e293b;min-height:180px}
+/* Tabs */
+.ab-tabs{display:flex;border-bottom:1px solid #1e293b;background:#0f172a;padding:0 14px;flex-shrink:0}
+.ab-t{background:none;border:none;color:#64748b;padding:8px 12px;font-size:12px;font-weight:500;border-bottom:2px solid transparent;transition:all .15s}
+.ab-t:hover{color:#e2e8f0}
+.ab-t.on{color:#f97316;border-bottom-color:#f97316}
+.ab-tc{display:none;flex:1;overflow-y:auto;padding:10px 14px}
+.ab-tc.on{display:block}
+/* KV table */
+.kv{width:100%;border-collapse:collapse}
+.kv th{background:#0f172a;color:#64748b;font-size:10px;text-transform:uppercase;padding:5px 7px;text-align:left;border-bottom:1px solid #1e293b}
+.kv td{padding:2px 3px;border-bottom:1px solid #1e293b}
+.ki{width:100%;background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:3px;padding:3px 7px;font-size:12px}
+.ki:focus{outline:none;border-color:#3b82f6}
+.ki.mono{font-family:monospace}
+.kchk{accent-color:#f97316;width:13px;height:13px;cursor:pointer}
+.kdel{background:none;border:none;color:#ef4444;font-size:13px;padding:1px 5px;opacity:.6}
+.kdel:hover{opacity:1}
+.ab-add{margin-top:7px;background:none;border:1px dashed #334155;color:#64748b;border-radius:4px;padding:5px;font-size:11px;width:100%}
+.ab-add:hover{border-color:#64748b;color:#e2e8f0}
+/* Auth */
+.ab-fg{display:flex;flex-direction:column;gap:3px;margin-bottom:9px}
+.ab-fg label{font-size:10px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.ab-fg input,.ab-fg select{background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:4px;padding:5px 9px;font-size:12px}
+.ab-fg input:focus,.ab-fg select:focus{outline:none;border-color:#3b82f6}
+.auth-note{font-size:11px;color:#475569;font-style:italic;margin-top:4px}
+.auth-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+/* Body */
+.btns-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+.bt-btn{background:none;border:1px solid #334155;color:#64748b;border-radius:4px;padding:3px 9px;font-size:11px}
+.bt-btn:hover{border-color:#64748b;color:#e2e8f0}
+.bt-btn.on{background:#1e3a5f;border-color:#3b82f6;color:#93c5fd}
+.ab-code{width:100%;background:#0d1117;border:1px solid #334155;color:#e2e8f0;border-radius:5px;padding:9px;font-family:monospace;font-size:12px;line-height:1.6;resize:vertical;min-height:160px}
+.ab-code:focus{outline:none;border-color:#3b82f6}
+.body-acts{display:flex;gap:5px;margin-top:5px}
+.sm-btn{background:#1e293b;border:1px solid #334155;color:#94a3b8;border-radius:3px;padding:3px 9px;font-size:11px}
+.sm-btn:hover{background:#334155;color:#e2e8f0}
+/* Response */
+.ab-resp{background:#0f172a;flex:0 0 300px;display:flex;flex-direction:column;overflow:hidden}
+.ab-resp-hd{display:flex;align-items:center;gap:8px;padding:7px 14px;border-bottom:1px solid #1e293b;background:#0a0f1e;cursor:pointer;user-select:none;flex-shrink:0}
+.ab-resp-title{font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.06em}
+.resp-badge{font-size:12px;font-weight:700;padding:2px 7px;border-radius:4px}
+.s2{background:rgba(34,197,94,.15);color:#22c55e}
+.s3{background:rgba(59,130,246,.15);color:#60a5fa}
+.s4{background:rgba(249,115,22,.15);color:#fb923c}
+.s5,.se{background:rgba(239,68,68,.15);color:#f87171}
+.resp-body{flex:1;overflow-y:auto}
+.json-v{padding:10px 14px;font-family:monospace;font-size:12px;line-height:1.7;white-space:pre-wrap;word-break:break-word}
+.j-s{color:#86efac}.j-n{color:#60a5fa}.j-b{color:#f97316}.j-null{color:#9ca3af;font-style:italic}.j-k{color:#e879f9}
+.resp-hdr-tbl{width:100%;border-collapse:collapse;font-size:12px}
+.resp-hdr-tbl td{padding:4px 12px;border-bottom:1px solid #1e293b;vertical-align:top}
+.resp-hdr-tbl td:first-child{color:#94a3b8;font-weight:500;width:40%;word-break:break-all}
+.resp-hdr-tbl td:last-child{color:#e2e8f0;word-break:break-all;font-family:monospace}
+.asrt-row{display:flex;align-items:center;gap:7px;padding:5px 12px;border-bottom:1px solid #1e293b;font-size:12px}
+.apass{color:#22c55e}.afail{color:#ef4444}
+.empty-resp{display:flex;flex-direction:column;align-items:center;justify-content:center;height:160px;color:#334155;gap:8px;font-size:12px}
+/* Modal */
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.72);z-index:1000;align-items:center;justify-content:center}
+.overlay.show{display:flex}
+.modal{background:#1e293b;border:1px solid #334155;border-radius:9px;padding:22px;min-width:380px;max-width:520px}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:14px}
+.modal-foot{display:flex;gap:7px;justify-content:flex-end;margin-top:18px}
+.btn-p{background:#f97316;color:#fff;border:none;border-radius:5px;padding:6px 14px;font-weight:600}
+.btn-p:hover{background:#ea580c}
+.btn-d{background:#1e293b;color:#94a3b8;border:1px solid #334155;border-radius:5px;padding:6px 12px}
+.btn-d:hover{background:#334155;color:#e2e8f0}
+.btn-g{background:#16a34a;color:#fff;border:none;border-radius:5px;padding:6px 12px;font-size:12px;font-weight:600}
+.btn-g:hover{background:#15803d}
+/* Toast */
+.toast{position:fixed;bottom:18px;right:18px;background:#334155;color:#e2e8f0;padding:9px 14px;border-radius:7px;font-size:13px;z-index:2000;opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.ok{background:#14532d;border-left:3px solid #22c55e}
+.toast.err{background:#7f1d1d;border-left:3px solid #ef4444}
+.toast.info{background:#1e3a5f;border-left:3px solid #3b82f6}
+/* Assertion builder row */
+.arow{display:flex;gap:5px;margin-bottom:5px;align-items:center}
+.arow select,.arow input{background:#1e293b;border:1px solid #334155;color:#e2e8f0;border-radius:3px;padding:3px 7px;font-size:12px;flex:1}
+</style>
+{% endblock %}
+
+{% block page_content %}
+<div class="ab">
+
+<!-- TOP BAR -->
+<div class="ab-top">
+  <div class="ab-brand">🔌 API Builder <small>frappe_k6</small></div>
+  <div style="display:flex;gap:6px;align-items:center">
+    <button class="sm-btn" onclick="importCollection()">⬆ Import</button>
+    <button class="sm-btn" id="btn-exp" onclick="exportCollection()">⬇ Export</button>
+    <a href="/k6-monitor" class="sm-btn" style="text-decoration:none">📊 Dashboard</a>
+    <a href="/k6-help" target="_blank" class="sm-btn" style="text-decoration:none">📖 Help</a>
+  </div>
+</div>
+
+<div class="ab-row">
+
+<!-- SIDEBAR -->
+<div class="ab-sb">
+  <div class="ab-sb-head">
+    <span>Collections</span>
+    <button class="sm-btn" onclick="showModal('mc')">+ New</button>
+  </div>
+  <div class="ab-col-list" id="col-list"><div style="padding:16px;color:#475569;font-size:11px">Loading…</div></div>
+  <div class="ab-sb-foot">
+    <button class="sm-btn" style="flex:1" onclick="newRequest()">+ New Request</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div class="ab-main">
+
+  <!-- URL BAR -->
+  <div class="ab-url-bar">
+    <input class="ab-rn" id="rname" value="Untitled Request" title="Click to rename">
+    <select class="ab-method" id="rmethod">
+      <option>GET</option><option>POST</option><option>PUT</option>
+      <option>PATCH</option><option>DELETE</option><option>OPTIONS</option><option>HEAD</option>
+    </select>
+    <input class="ab-url" id="rurl" placeholder="https://api.example.com/endpoint  or  /api/resource/Item">
+    <button class="btn-send" id="btn-send" onclick="sendReq()">▶ Send</button>
+  </div>
+
+  <div class="ab-split">
+
+    <!-- REQUEST PANEL -->
+    <div class="ab-req-panel">
+      <div class="ab-tabs" style="align-items:center">
+        <button class="ab-t on" data-t="params">Params <span id="bp" style="font-size:10px;background:#1e293b;padding:0 4px;border-radius:8px;margin-left:3px">0</span></button>
+        <button class="ab-t" data-t="auth">Auth</button>
+        <button class="ab-t" data-t="headers">Headers <span id="bh" style="font-size:10px;background:#1e293b;padding:0 4px;border-radius:8px;margin-left:3px">0</span></button>
+        <button class="ab-t" data-t="body">Body</button>
+        <button class="ab-t" data-t="vars">Variables</button>
+        <button class="ab-t" data-t="asserts">Assertions <span id="ba" style="font-size:10px;background:#1e293b;padding:0 4px;border-radius:8px;margin-left:3px">0</span></button>
+        <div style="flex:1"></div>
+        <button class="sm-btn" onclick="saveReq()" style="margin:5px 4px">💾 Save</button>
+        <button class="btn-g" onclick="showAddK6Modal()" style="margin:5px 4px;font-size:11px;padding:4px 10px">➕ Add to K6</button>
+      </div>
+
+      <!-- PARAMS -->
+      <div class="ab-tc on" id="tab-params">
+        <table class="kv"><thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead><tbody id="pb"></tbody></table>
+        <button class="ab-add" onclick="addKv('pb','p')">+ Add Parameter</button>
+      </div>
+
+      <!-- AUTH -->
+      <div class="ab-tc" id="tab-auth">
+        <div class="ab-fg" style="max-width:240px">
+          <label>Auth Type</label>
+          <select id="auth-type" onchange="renderAuth()">
+            <option value="None">No Auth</option>
+            <option value="Basic Auth">Basic Auth</option>
+            <option value="Bearer Token">Bearer Token</option>
+            <option value="API Key">API Key (Header)</option>
+            <option value="OAuth 2.0">OAuth 2.0 — Bearer</option>
+            <option value="JWT Token">JWT Token</option>
+            <option value="Custom Header">Custom Header</option>
+            <option value="Session (Frappe Login)">Frappe Session Login</option>
+          </select>
+        </div>
+        <div id="auth-fields"></div>
+      </div>
+
+      <!-- HEADERS -->
+      <div class="ab-tc" id="tab-headers">
+        <div style="display:flex;gap:5px;margin-bottom:8px;flex-wrap:wrap">
+          <button class="sm-btn" onclick="addKv('hb','h','Content-Type','application/json')">+ Content-Type: JSON</button>
+          <button class="sm-btn" onclick="addKv('hb','h','Accept','application/json')">+ Accept: JSON</button>
+          <button class="sm-btn" onclick="addKv('hb','h','User-Agent','frappe-k6/1.0')">+ User-Agent</button>
+          <button class="sm-btn" onclick="addKv('hb','h','Authorization','Bearer ')">+ Authorization</button>
+        </div>
+        <table class="kv"><thead><tr><th></th><th>Header</th><th>Value</th><th></th></tr></thead><tbody id="hb"></tbody></table>
+        <button class="ab-add" onclick="addKv('hb','h')">+ Add Header</button>
+      </div>
+
+      <!-- BODY -->
+      <div class="ab-tc" id="tab-body">
+        <div class="btns-bar">
+          <button class="bt-btn on" data-bt="none" onclick="setBt('none')">None</button>
+          <button class="bt-btn" data-bt="json" onclick="setBt('json')">JSON</button>
+          <button class="bt-btn" data-bt="xml" onclick="setBt('xml')">XML</button>
+          <button class="bt-btn" data-bt="text" onclick="setBt('text')">Text</button>
+          <button class="bt-btn" data-bt="html" onclick="setBt('html')">HTML</button>
+          <button class="bt-btn" data-bt="form-data" onclick="setBt('form-data')">Form Data</button>
+          <button class="bt-btn" data-bt="urlencoded" onclick="setBt('urlencoded')">x-www-form-urlencoded</button>
+        </div>
+        <div id="body-none-hint" style="color:#475569;font-size:12px">No body for this request.</div>
+        <textarea class="ab-code" id="body-txt" style="display:none" placeholder='{"key": "value"}'></textarea>
+        <div id="form-area" style="display:none">
+          <table class="kv"><thead><tr><th></th><th>Key</th><th>Value</th><th></th></tr></thead><tbody id="fdb"></tbody></table>
+          <button class="ab-add" onclick="addKv('fdb','fd')">+ Add Field</button>
+        </div>
+        <div class="body-acts" id="body-acts" style="display:none">
+          <button class="sm-btn" onclick="prettyBody()">⇄ Pretty</button>
+          <button class="sm-btn" onclick="validateJson()">✓ Validate</button>
+          <button class="sm-btn" onclick="document.getElementById('body-txt').value=''">✕ Clear</button>
+          <button class="sm-btn" onclick="navigator.clipboard.writeText(document.getElementById('body-txt').value)">📋 Copy</button>
+          <label class="sm-btn" style="cursor:pointer">⬆ Import<input type="file" accept=".json" style="display:none" onchange="importBodyFile(event)"></label>
+        </div>
+      </div>
+
+      <!-- VARIABLES -->
+      <div class="ab-tc" id="tab-vars">
+        <p style="color:#64748b;font-size:11px;margin-bottom:10px">Use <code style="color:#86efac">{{varName}}</code> in URL, headers, body. Built-in: <code style="color:#86efac">{{timestamp}}</code> <code style="color:#86efac">{{uuid}}</code> <code style="color:#86efac">{{random_int}}</code></p>
+        <table class="kv"><thead><tr><th>Variable</th><th>Value</th><th>Scope</th><th></th></tr></thead><tbody id="vb"></tbody></table>
+        <button class="ab-add" onclick="addVarRow()">+ Add Variable</button>
+      </div>
+
+      <!-- ASSERTIONS -->
+      <div class="ab-tc" id="tab-asserts">
+        <p style="color:#64748b;font-size:11px;margin-bottom:10px">Define expected results. Run after every Send.</p>
+        <div id="alist"></div>
+        <button class="ab-add" onclick="addAsrt()">+ Add Assertion</button>
+      </div>
+    </div><!-- /req-panel -->
+
+    <!-- RESPONSE -->
+    <div class="ab-resp" id="resp-panel">
+      <div class="ab-resp-hd" onclick="toggleResp()">
+        <span class="ab-resp-title">Response</span>
+        <div id="resp-meta" style="display:none;gap:10px;align-items:center">
+          <span class="resp-badge" id="resp-status">–</span>
+          <span style="font-size:12px;color:#64748b" id="resp-time">–</span>
+          <span style="font-size:12px;color:#64748b" id="resp-sz">–</span>
+        </div>
+        <div style="margin-left:auto;display:flex;gap:5px">
+          <button class="sm-btn" id="btn-cp-resp" onclick="event.stopPropagation();cpResp()" style="display:none">📋 Copy</button>
+          <span style="font-size:10px;color:#334155" id="ri">▲</span>
+        </div>
+      </div>
+      <div id="resp-inner">
+        <div class="ab-tabs ab-resp-tabs" style="padding:0 14px;background:#0f172a;border-bottom:1px solid #1e293b">
+          <button class="ab-t on" data-rt="body">Body</button>
+          <button class="ab-t" data-rt="hdrs">Headers</button>
+          <button class="ab-t" data-rt="tests">Tests</button>
+        </div>
+        <div class="resp-body">
+          <div id="rt-body">
+            <div class="empty-resp" id="resp-empty"><span style="font-size:32px">📡</span><span>Enter a URL and click <strong>Send</strong></span></div>
+            <div class="json-v" id="resp-jv" style="display:none"></div>
+          </div>
+          <div id="rt-hdrs" style="display:none"><table class="resp-hdr-tbl" id="resp-hdr-tbl"></table></div>
+          <div id="rt-tests" style="display:none"><div id="resp-asrt-list"></div></div>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /split -->
+</div><!-- /main -->
+</div><!-- /ab-row -->
+</div><!-- /ab -->
+
+<!-- NEW COLLECTION MODAL -->
+<div class="overlay" id="mc">
+  <div class="modal">
+    <h3>📁 New Collection</h3>
+    <div class="ab-fg"><label>Name *</label><input id="mc-name" class="ki" placeholder="My API Collection"></div>
+    <div class="ab-fg"><label>Description</label><input id="mc-desc" class="ki" placeholder="Optional"></div>
+    <div class="ab-fg"><label>Base URL</label><input id="mc-base" class="ki" placeholder="https://api.example.com (optional)"></div>
+    <div class="modal-foot">
+      <button class="btn-d" onclick="hideModal('mc')">Cancel</button>
+      <button class="btn-p" onclick="createCol()">Create</button>
+    </div>
+  </div>
+</div>
+
+<!-- ADD TO K6 MODAL -->
+<div class="overlay" id="mk6">
+  <div class="modal">
+    <h3>➕ Add to K6 Load Test</h3>
+    <p style="color:#64748b;font-size:12px;margin-bottom:12px">Choose an existing Load Test Config or create a new one.</p>
+    <div class="ab-fg"><label>Load Test Config</label><select id="k6sel" class="ki"><option value="">— Create New Config —</option></select></div>
+    <div class="modal-foot">
+      <button class="btn-d" onclick="hideModal('mk6')">Cancel</button>
+      <button class="btn-g" onclick="addToK6()">Add Endpoint</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── State ── */
+var S = {col:null, reqName:null, sending:false, bt:"none", lastResp:null, respOpen:true};
+var _authState = {};
+
+/* ── CSRF / API ── */
+function csrf(){return (window.frappe&&frappe.csrf_token&&frappe.csrf_token!=='None')?frappe.csrf_token:(document.querySelector('meta[name="csrf-token"]')||{getAttribute:function(){return '';}}).getAttribute('content');}
+function api(m,a,ok,fail){
+  fetch('/api/method/'+m,{method:'POST',credentials:'same-origin',
+    headers:{'Content-Type':'application/json','X-Frappe-CSRF-Token':csrf(),'Accept':'application/json'},
+    body:JSON.stringify(a||{})})
+  .then(function(r){return r.json();})
+  .then(function(r){if(r&&r.message!==undefined){ok&&ok(r.message);}else if(r&&r.exc){(fail||console.error)(r.exc);}else{ok&&ok(r);}})
+  .catch(function(e){(fail||console.error)(String(e));});
+}
+
+/* ── Toast ── */
+var _tt;
+function toast(msg,type){var e=document.getElementById('toast');e.textContent=msg;e.className='toast show '+(type||'info');clearTimeout(_tt);_tt=setTimeout(function(){e.classList.remove('show');},3200);}
+
+/* ── Tabs ── */
+document.querySelectorAll('.ab-tabs .ab-t').forEach(function(btn){
+  btn.addEventListener('click',function(){
+    var grp=this.closest('.ab-tabs');
+    grp.querySelectorAll('.ab-t').forEach(function(b){b.classList.remove('on');});
+    this.classList.add('on');
+    var tid=this.dataset.t||this.dataset.rt;
+    if(this.dataset.t){
+      document.querySelectorAll('.ab-tc').forEach(function(c){c.classList.remove('on');});
+      var tc=document.getElementById('tab-'+tid);if(tc)tc.classList.add('on');
+    } else {
+      ['body','hdrs','tests'].forEach(function(t){document.getElementById('rt-'+t).style.display=t===tid?'':'none';});
+    }
+  });
+});
+
+/* ── KV rows ── */
+function e_(s){return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+function addKv(tbId,kind,k,v,en){
+  var tr=document.createElement('tr');tr.dataset.kind=kind;
+  tr.innerHTML='<td><input type="checkbox" class="kchk"'+(en===false?'':' checked')+'></td>'+
+    '<td><input class="ki mono" placeholder="key" value="'+e_(k||'')+'"></td>'+
+    '<td><input class="ki" placeholder="value" value="'+e_(v||'')+'"></td>'+
+    '<td><button class="kdel" onclick="this.closest(\'tr\').remove();updB()">✕</button></td>';
+  document.getElementById(tbId).appendChild(tr);updB();
+}
+function addVarRow(k,v,sc){
+  var tr=document.createElement('tr');
+  tr.innerHTML='<td><input class="ki mono" placeholder="varName" value="'+e_(k||'')+'"></td>'+
+    '<td><input class="ki" placeholder="value" value="'+e_(v||'')+'"></td>'+
+    '<td><select class="ki" style="width:80px"><option'+(sc==='env'?' selected':'')+'>local</option><option'+(sc==='env'?' selected':'')+' value="env">env</option><option'+(sc==='global'?' selected':'')+' value="global">global</option></select></td>'+
+    '<td><button class="kdel" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+  document.getElementById('vb').appendChild(tr);
+}
+function addAsrt(t,path,op,val){
+  var d=document.createElement('div');d.className='arow';
+  d.innerHTML='<select><option value="status_code"'+(t==='status_code'?' selected':'')+'>Status Code</option><option value="response_time"'+(t==='response_time'?' selected':'')+'>Response Time</option><option value="body_contains"'+(t==='body_contains'?' selected':'')+'>Body Contains</option><option value="json_path"'+(t==='json_path'?' selected':'')+'>JSON Path</option><option value="header"'+(t==='header'?' selected':'')+'>Header Value</option></select>'+
+    '<input class="ki mono" placeholder="path/field" value="'+e_(path||'')+'">'+
+    '<select><option value="equals"'+(op==='equals'?' selected':'')+'>equals</option><option value="not_equals"'+(op==='not_equals'?' selected':'')+'>not equals</option><option value="contains"'+(op==='contains'?' selected':'')+'>contains</option><option value="less_than"'+(op==='less_than'?' selected':'')+'>less than</option><option value="greater_than"'+(op==='greater_than'?' selected':'')+'>greater than</option></select>'+
+    '<input class="ki" placeholder="expected value" value="'+e_(val||'')+'">'+
+    '<button class="kdel" onclick="this.closest(\'.arow\').remove();updB()">✕</button>';
+  document.getElementById('alist').appendChild(d);updB();
+}
+function updB(){
+  document.getElementById('bp').textContent=document.querySelectorAll('#pb input[type=checkbox]:checked').length;
+  document.getElementById('bh').textContent=document.querySelectorAll('#hb input[type=checkbox]:checked').length;
+  document.getElementById('ba').textContent=document.querySelectorAll('#alist .arow').length;
+}
+
+/* ── Auth fields ── */
+function renderAuth(pre){
+  var t=document.getElementById('auth-type').value;pre=pre||_authState[t]||{};
+  var el=document.getElementById('auth-fields');var h='';
+  if(t==='None'){h='<p class="auth-note">No authentication header will be sent.</p>';}
+  else if(t==='Basic Auth'||t==='Session (Frappe Login)'){
+    h='<div class="auth-grid"><div class="ab-fg"><label>Username</label><input id="au" class="ki" value="'+e_(pre.username||'')+'"></div><div class="ab-fg"><label>Password</label><input id="ap" type="password" class="ki" value="'+e_(pre.password||'')+'"></div></div>'+
+      '<p class="auth-note">'+(t==='Basic Auth'?'Sent as Base64 Authorization header.':'Test runner logs in with these credentials.')+'</p>';
+  }else if(t==='Bearer Token'||t==='JWT Token'||t==='OAuth 2.0'){
+    h='<div class="ab-fg"><label>Token</label><input id="atk" class="ki" value="'+e_(pre.token||'')+'" placeholder="eyJhbGci…"></div><p class="auth-note">Sent as: <code>Authorization: Bearer &lt;token&gt;</code>. Use <code>{{token}}</code> for variables.</p>';
+  }else if(t==='API Key'){
+    h='<div class="auth-grid"><div class="ab-fg"><label>Header Name</label><input id="akh" class="ki" value="'+e_(pre.header||'X-API-Key')+'"></div><div class="ab-fg"><label>API Key Value</label><input id="akv" class="ki" value="'+e_(pre.value||'')+'"></div></div>';
+  }else if(t==='Custom Header'){
+    h='<div class="auth-grid"><div class="ab-fg"><label>Header Name</label><input id="ach" class="ki" value="'+e_(pre.header||'Authorization')+'"></div><div class="ab-fg"><label>Value</label><input id="acv" class="ki" value="'+e_(pre.value||'')+'"></div></div>';
+  }
+  el.innerHTML=h;
+}
+function _gv(id){var e=document.getElementById(id);return e?e.value:'';}
+function getAuth(){
+  var t=document.getElementById('auth-type').value;var c={};
+  if(t==='Basic Auth'||t==='Session (Frappe Login)'){c={username:_gv('au'),password:_gv('ap')};}
+  else if(t==='Bearer Token'||t==='JWT Token'||t==='OAuth 2.0'){c={token:_gv('atk')};}
+  else if(t==='API Key'){c={header:_gv('akh'),value:_gv('akv')};}
+  else if(t==='Custom Header'){c={header:_gv('ach'),value:_gv('acv')};}
+  _authState[t]=c;return c;
+}
+
+/* ── Body type ── */
+function setBt(bt){
+  S.bt=bt;
+  document.querySelectorAll('.bt-btn').forEach(function(b){b.classList.toggle('on',b.dataset.bt===bt);});
+  document.getElementById('body-none-hint').style.display=bt==='none'?'':'none';
+  var isForm=bt==='form-data'||bt==='urlencoded';
+  document.getElementById('body-txt').style.display=(bt!=='none'&&!isForm)?'':'none';
+  document.getElementById('form-area').style.display=isForm?'':'none';
+  document.getElementById('body-acts').style.display=bt!=='none'?'':'none';
+  if(bt==='json'&&!document.getElementById('body-txt').value)document.getElementById('body-txt').value='{\n  \n}';
+}
+function prettyBody(){var ta=document.getElementById('body-txt');try{ta.value=JSON.stringify(JSON.parse(ta.value),null,2);toast('Formatted ✓','ok');}catch(e){toast('Invalid JSON','err');}}
+function validateJson(){try{JSON.parse(document.getElementById('body-txt').value);toast('Valid JSON ✓','ok');}catch(e){toast('Invalid JSON: '+e.message,'err');}}
+function importBodyFile(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){document.getElementById('body-txt').value=ev.target.result;setBt('json');e.target.value='';};r.readAsText(f);}
+function getBodyContent(){
+  if(S.bt==='none')return '';
+  if(S.bt==='form-data'||S.bt==='urlencoded'){var o={};document.querySelectorAll('#fdb tr').forEach(function(r){var is=r.querySelectorAll('input.ki');if(is[0]&&is[0].value)o[is[0].value]=is[1]?is[1].value:'';});return JSON.stringify(o);}
+  return document.getElementById('body-txt').value;
+}
+
+/* ── Collect config ── */
+function collectCfg(){
+  var headers=[],params=[],vars=[],asserts=[];
+  document.querySelectorAll('#hb tr').forEach(function(r){var is=r.querySelectorAll('input.ki');var cb=r.querySelector('input[type=checkbox]');if(is[0]&&is[0].value)headers.push({key:is[0].value,value:is[1]?is[1].value:'',enabled:cb?cb.checked:true});});
+  document.querySelectorAll('#pb tr').forEach(function(r){var is=r.querySelectorAll('input.ki');var cb=r.querySelector('input[type=checkbox]');if(is[0]&&is[0].value)params.push({key:is[0].value,value:is[1]?is[1].value:'',enabled:cb?cb.checked:true});});
+  document.querySelectorAll('#vb tr').forEach(function(r){var is=r.querySelectorAll('input.ki');var sel=r.querySelector('select');if(is[0]&&is[0].value)vars.push({key:is[0].value,value:is[1]?is[1].value:'',scope:sel?sel.value:'local'});});
+  document.querySelectorAll('#alist .arow').forEach(function(d){var sels=d.querySelectorAll('select');var is=d.querySelectorAll('input.ki');asserts.push({type:sels[0]?sels[0].value:'status_code',path:is[0]?is[0].value:'',operator:sels[1]?sels[1].value:'equals',value:is[1]?is[1].value:''});});
+  return {name:S.reqName,request_name:document.getElementById('rname').value||'Untitled',collection:S.col,method:document.getElementById('rmethod').value,url:document.getElementById('rurl').value,auth_type:document.getElementById('auth-type').value,auth_config:getAuth(),headers:headers,params:params,body_type:S.bt,body_content:getBodyContent(),variables:vars,expected_status:200,response_time_threshold_ms:2000,assertions:asserts};
+}
+
+/* ── Send ── */
+function sendReq(){
+  var url=document.getElementById('rurl').value.trim();
+  if(!url){toast('Enter a URL','err');return;}
+  if(S.sending)return;
+  S.sending=true;
+  var btn=document.getElementById('btn-send');btn.disabled=true;btn.textContent='⏳…';
+  api('frappe_k6.api.api_tester.send_request',{config_json:JSON.stringify(collectCfg())},function(r){
+    S.sending=false;btn.disabled=false;btn.textContent='▶ Send';
+    if(!r){toast('No response','err');return;}
+    if(!r.ok){toast('Error: '+(r.error||'failed'),'err');document.getElementById('resp-jv').style.display='';document.getElementById('resp-jv').textContent='Error: '+(r.error||'');document.getElementById('resp-empty').style.display='none';return;}
+    S.lastResp=r;if(!S.respOpen)toggleResp();renderResp(r);
+  },function(e){S.sending=false;btn.disabled=false;btn.textContent='▶ Send';toast('Error: '+e,'err');});
+}
+
+/* ── Render response ── */
+function renderResp(r){
+  document.getElementById('resp-meta').style.display='flex';
+  document.getElementById('btn-cp-resp').style.display='';
+  var sb=document.getElementById('resp-status');sb.textContent=r.status||'ERR';
+  var sc=r.status;sb.className='resp-badge '+(sc>=200&&sc<300?'s2':sc>=300&&sc<400?'s3':sc>=400&&sc<500?'s4':sc>=500?'s5':'se');
+  document.getElementById('resp-time').textContent=(r.elapsed_ms||0)+' ms';
+  document.getElementById('resp-sz').textContent=fmtSz(r.size_bytes||0);
+  document.getElementById('resp-empty').style.display='none';
+  var jv=document.getElementById('resp-jv');jv.style.display='';
+  var ct=(r.content_type||'').toLowerCase();
+  if(ct.indexOf('json')>-1||(r.body&&r.body.trim()[0]==='{')){
+    try{jv.innerHTML=syntaxHL(JSON.stringify(JSON.parse(r.body),null,2));}catch(e){jv.textContent=r.body;}
+  }else{jv.textContent=r.body||'';}
+  var ht=document.getElementById('resp-hdr-tbl');
+  ht.innerHTML=Object.entries(r.headers||{}).map(function(kv){return '<tr><td>'+e_(kv[0])+'</td><td>'+e_(String(kv[1]))+'</td></tr>';}).join('')||'<tr><td colspan="2" style="color:#475569;padding:10px">No headers</td></tr>';
+  var al=document.getElementById('resp-asrt-list');
+  var ah='<div class="asrt-row"><span class="'+(r.status_ok?'apass':'afail')+'">'+(r.status_ok?'✓':'✗')+'</span><span>Status '+(r.status||'?')+' '+(r.status_ok?'matches':'does not match')+' expected</span></div>';
+  ah+='<div class="asrt-row"><span class="'+(r.time_ok?'apass':'afail')+'">'+(r.time_ok?'✓':'✗')+'</span><span>Response time '+(r.elapsed_ms||0)+'ms '+(r.time_ok?'within':'exceeds')+' threshold</span></div>';
+  (r.assertions||[]).forEach(function(a){var lbl=a.type+(a.path?' ['+a.path+']':'')+' '+(a.operator||'')+' "'+(a.expected||a.value||'')+'"'+(a.actual!==undefined?' → "'+a.actual+'"':'');if(a.message)lbl=a.message;ah+='<div class="asrt-row"><span class="'+(a.passed?'apass':'afail')+'">'+(a.passed?'✓':'✗')+'</span><span>'+e_(lbl)+'</span></div>';});
+  al.innerHTML=ah||'<div style="padding:12px;color:#475569;font-size:12px">No assertions.</div>';
+  if(r.all_passed)toast('✅ '+r.status+' — All checks passed','ok');else toast('⚠ '+r.status+' — Some checks failed','err');
+}
+function fmtSz(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB';}
+function syntaxHL(j){return j.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g,function(m){if(/^"/.test(m))return /:$/.test(m)?'<span class="j-k">'+m+'</span>':'<span class="j-s">'+m+'</span>';if(/true|false/.test(m))return '<span class="j-b">'+m+'</span>';if(/null/.test(m))return '<span class="j-null">'+m+'</span>';return '<span class="j-n">'+m+'</span>';});}
+function cpResp(){if(S.lastResp)navigator.clipboard.writeText(S.lastResp.body||'');toast('Copied','ok');}
+function toggleResp(){S.respOpen=!S.respOpen;var p=document.getElementById('resp-panel');p.style.flex=S.respOpen?'0 0 300px':'0 0 40px';document.getElementById('resp-inner').style.display=S.respOpen?'':'none';document.getElementById('ri').textContent=S.respOpen?'▲':'▼';}
+
+/* ── Collections ── */
+function loadCols(){
+  api('frappe_k6.api.api_tester.get_collections',{},function(cols){
+    var el=document.getElementById('col-list');
+    if(!cols||!cols.length){el.innerHTML='<div style="padding:14px 12px;color:#475569;font-size:11px">No collections.<br>Click <strong>+ New</strong> above.</div>';return;}
+    el.innerHTML=cols.map(function(c){return '<div class="ab-col-item" data-col="'+e_(c.name)+'"><div class="ab-col-hd" onclick="toggleCol(this)"><span class="ab-col-arr">▶</span><span class="ab-col-nm" title="'+e_(c.collection_name)+'">📁 '+e_(c.collection_name)+'</span><span class="ab-col-ct">'+(c.request_count||0)+'</span><button class="kdel" title="Delete" onclick="event.stopPropagation();delCol(\''+e_(c.name)+'\')">✕</button></div><div class="ab-req-list" id="rl-'+e_(c.name)+'"><div style="padding:5px 8px;color:#475569;font-size:11px">↑ expand</div></div></div>';}).join('');
+  });
+}
+function toggleCol(hd){var item=hd.closest('.ab-col-item');item.classList.toggle('open');if(item.classList.contains('open')){S.col=item.dataset.col;loadReqs(S.col);}}
+function loadReqs(col){
+  api('frappe_k6.api.api_tester.get_requests',{collection:col},function(reqs){
+    var el=document.getElementById('rl-'+col);
+    if(!reqs||!reqs.length){el.innerHTML='<div style="padding:5px 8px;color:#475569;font-size:11px">No requests — click "+ New Request"</div>';return;}
+    el.innerHTML=reqs.map(function(r){return '<div class="ab-req-it" data-req="'+e_(r.name)+'" onclick="loadReq(\''+e_(r.name)+'\',\''+e_(col)+'\')"><span class="mth mth-'+r.method+'">'+r.method+'</span><span class="ab-req-nm" title="'+e_(r.request_name)+'">'+e_(r.request_name)+'</span><button class="kdel" title="Duplicate" onclick="event.stopPropagation();dupReq(\''+e_(r.name)+'\')">⧉</button><button class="kdel" title="Delete" onclick="event.stopPropagation();delReq(\''+e_(r.name)+'\',\''+e_(col)+'\')">✕</button></div>';}).join('');
+  });
+}
+function loadReq(name,col){
+  api('frappe_k6.api.api_tester.get_request',{name:name},function(doc){
+    if(!doc)return;
+    S.reqName=doc.name;S.col=col||doc.collection;
+    document.querySelectorAll('.ab-req-it').forEach(function(r){r.classList.remove('active');});
+    var el=document.querySelector('.ab-req-it[data-req="'+doc.name+'"]');if(el)el.classList.add('active');
+    document.getElementById('rname').value=doc.request_name||'Untitled';
+    document.getElementById('rmethod').value=doc.method||'GET';
+    document.getElementById('rurl').value=doc.url||'';
+    document.getElementById('auth-type').value=doc.auth_type||'None';
+    var ac={};try{ac=JSON.parse(doc.auth_config_json||'{}');}catch(e){}
+    renderAuth(ac);
+    ['pb','hb','vb','fdb'].forEach(function(id){document.getElementById(id).innerHTML='';});
+    document.getElementById('alist').innerHTML='';
+    try{JSON.parse(doc.params_json||'[]').forEach(function(p){addKv('pb','p',p.key,p.value,p.enabled);});}catch(e){}
+    try{JSON.parse(doc.headers_json||'[]').forEach(function(h){addKv('hb','h',h.key,h.value,h.enabled);});}catch(e){}
+    try{JSON.parse(doc.variables_json||'[]').forEach(function(v){addVarRow(v.key,v.value,v.scope);});}catch(e){}
+    try{JSON.parse(doc.assertions_json||'[]').forEach(function(a){addAsrt(a.type,a.path,a.operator,a.value);});}catch(e){}
+    var bt=doc.body_type||'none';setBt(bt);
+    if(bt==='form-data'||bt==='urlencoded'){try{Object.entries(JSON.parse(doc.body_content||'{}')).forEach(function(kv){addKv('fdb','fd',kv[0],kv[1]);});}catch(e){}}
+    else{document.getElementById('body-txt').value=doc.body_content||'';}
+    updB();toast('Loaded: '+doc.request_name,'info');
+  });
+}
+function newRequest(){
+  S.reqName=null;
+  document.getElementById('rname').value='Untitled Request';
+  document.getElementById('rmethod').value='GET';
+  document.getElementById('rurl').value='';
+  document.getElementById('auth-type').value='None';renderAuth();
+  ['pb','hb','vb','fdb'].forEach(function(id){document.getElementById(id).innerHTML='';});
+  document.getElementById('alist').innerHTML='';
+  document.getElementById('body-txt').value='';setBt('none');
+  document.getElementById('resp-empty').style.display='';
+  document.getElementById('resp-jv').style.display='none';
+  document.getElementById('resp-meta').style.display='none';
+  document.querySelectorAll('.ab-req-it').forEach(function(r){r.classList.remove('active');});
+  updB();
+}
+
+/* ── Save / Delete / Dup ── */
+function saveReq(){
+  var cfg=collectCfg();if(S.lastResp)cfg.last_response=S.lastResp;
+  api('frappe_k6.api.api_tester.save_api_request',{config_json:JSON.stringify(cfg)},function(n){
+    S.reqName=n;toast('Saved ✓','ok');if(S.col)loadReqs(S.col);loadCols();
+  });
+}
+function delReq(name,col){if(!confirm('Delete this request?'))return;api('frappe_k6.api.api_tester.delete_api_request',{name:name},function(){toast('Deleted','info');if(S.reqName===name)newRequest();loadReqs(col);loadCols();});}
+function dupReq(name){api('frappe_k6.api.api_tester.duplicate_api_request',{name:name},function(n){toast('Duplicated','ok');loadCols();loadReq(n);});}
+
+/* ── Collection CRUD ── */
+function createCol(){
+  var n=document.getElementById('mc-name').value.trim();if(!n){toast('Name required','err');return;}
+  api('frappe_k6.api.api_tester.save_collection',{name:'',collection_name:n,description:document.getElementById('mc-desc').value,base_url:document.getElementById('mc-base').value},function(){toast('Created','ok');hideModal('mc');loadCols();});
+}
+function delCol(name){if(!confirm('Delete collection and ALL its requests?'))return;api('frappe_k6.api.api_tester.delete_collection',{name:name},function(){toast('Deleted','info');loadCols();});}
+
+/* ── Add to K6 ── */
+function showAddK6Modal(){
+  api('frappe_k6.api.api_tester.get_load_test_configs',{},function(cfgs){
+    var sel=document.getElementById('k6sel');sel.innerHTML='<option value="">— Create New Config —</option>';
+    (cfgs||[]).forEach(function(c){sel.innerHTML+='<option value="'+e_(c.name)+'">'+e_(c.test_name||c.name)+' ['+e_(c.scenario_type||'')+']</option>';});
+  });
+  showModal('mk6');
+}
+function addToK6(){
+  var cfg=collectCfg();var sel=document.getElementById('k6sel').value;
+  api('frappe_k6.api.api_tester.add_to_load_test',{request_name_or_config:JSON.stringify(cfg),config_name:sel},function(ltName){toast('Added to: '+ltName,'ok');hideModal('mk6');});
+}
+
+/* ── Import / Export ── */
+function exportCollection(){
+  if(!S.col){toast('Open a collection first (click to expand)','err');return;}
+  api('frappe_k6.api.api_tester.export_collection',{collection_name:S.col},function(data){
+    var blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+    var url=URL.createObjectURL(blob);var a=document.createElement('a');
+    a.href=url;a.download=(data.collection.collection_name||'collection')+'.json';
+    document.body.appendChild(a);a.click();document.body.removeChild(a);URL.revokeObjectURL(url);
+    toast('Exported','ok');
+  });
+}
+function importCollection(){
+  var inp=document.createElement('input');inp.type='file';inp.accept='.json';
+  inp.onchange=function(e){var f=e.target.files[0];if(!f)return;var r=new FileReader();r.onload=function(ev){api('frappe_k6.api.api_tester.import_collection',{json_data:ev.target.result},function(r){toast('Imported '+r.imported+' requests into "'+r.collection+'"','ok');loadCols();});};r.readAsText(f);};
+  document.body.appendChild(inp);inp.click();document.body.removeChild(inp);
+}
+
+/* ── Modal helpers ── */
+function showModal(id){document.getElementById(id).classList.add('show');}
+function hideModal(id){document.getElementById(id).classList.remove('show');}
+document.querySelectorAll('.overlay').forEach(function(o){o.addEventListener('click',function(e){if(e.target===o)o.classList.remove('show');});});
+
+/* ── Init ── */
+renderAuth();
+loadCols();
+</script>
+{% endblock %}

@@ -1,0 +1,726 @@
+{% extends "templates/web.html" %}
+{% block title %}K6 Performance Monitor{% endblock %}
+{% block no_sidebar %}1{% endblock %}
+
+{% block head_include %}
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+/* ── Reset & Base ──────────────────────────────────────────── */
+body { background:#0d0d0d !important; color:#e2e8f0 !important; font-family:'Inter',sans-serif; }
+.web-header, .navbar, footer.web-footer { display:none !important; }
+.container { max-width:100% !important; padding:0 !important; }
+* { box-sizing:border-box; }
+
+/* ── Top Bar ───────────────────────────────────────────────── */
+.k6-topbar {
+  display:flex; align-items:center; justify-content:space-between;
+  background:#111827; border-bottom:1px solid #1f2937;
+  padding:10px 20px; position:sticky; top:0; z-index:100;
+}
+.k6-brand { display:flex; align-items:center; gap:10px; }
+.k6-logo { font-size:24px; }
+.k6-title { font-size:17px; font-weight:700; color:#f97316; letter-spacing:.5px; }
+.k6-badge {
+  font-size:11px; padding:3px 8px; border-radius:20px;
+  background:#dc2626; color:#fff; animation:pulse 2s infinite;
+}
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.5} }
+.k6-tabs { display:flex; gap:4px; }
+.k6-tab {
+  background:transparent; border:1px solid #374151; color:#9ca3af;
+  padding:6px 14px; border-radius:6px; cursor:pointer; font-size:13px;
+  transition:all .2s;
+}
+.k6-tab:hover { background:#1f2937; color:#e2e8f0; }
+.k6-tab.active { background:#f97316; border-color:#f97316; color:#fff; font-weight:600; }
+.k6-topbar-right { display:flex; align-items:center; gap:8px; }
+.k6-ext-btns { display:flex; gap:6px; }
+.k6-ext-btn {
+  padding:5px 12px; border-radius:6px; font-size:12px; font-weight:600;
+  cursor:pointer; border:none; text-decoration:none; display:inline-flex;
+  align-items:center; gap:5px; transition:all .2s;
+}
+.k6-ext-btn.grafana { background:#e85d04; color:#fff; }
+.k6-ext-btn.grafana:hover { background:#c2410c; }
+.k6-ext-btn.prometheus { background:#e75480; color:#fff; }
+.k6-ext-btn.prometheus:hover { background:#be185d; }
+.k6-ext-btn.help { background:#1f2937; color:#9ca3af; border:1px solid #374151; }
+.k6-ext-btn.help:hover { background:#374151; color:#fff; }
+.k6-last-refresh { font-size:11px; color:#6b7280; }
+.k6-btn-refresh {
+  background:transparent; border:1px solid #374151; color:#9ca3af;
+  padding:4px 10px; border-radius:6px; cursor:pointer; font-size:14px;
+}
+.k6-btn-refresh:hover { color:#fff; }
+
+/* ── Main Content ──────────────────────────────────────────── */
+.k6-main { padding:20px; }
+.k6-tab-content { display:none; }
+.k6-tab-content.active { display:block; }
+
+/* ── Section Label ─────────────────────────────────────────── */
+.k6-section-label {
+  font-size:12px; font-weight:700; color:#6b7280;
+  text-transform:uppercase; letter-spacing:1px;
+  margin:0 0 12px; padding-bottom:6px;
+  border-bottom:1px solid #1f2937;
+}
+
+/* ── Metric Cards ──────────────────────────────────────────── */
+.k6-cards-row { display:grid; grid-template-columns:repeat(6,1fr); gap:12px; margin-bottom:20px; }
+@media(max-width:1200px){ .k6-cards-row{grid-template-columns:repeat(3,1fr);} }
+@media(max-width:768px){ .k6-cards-row{grid-template-columns:repeat(2,1fr);} }
+.k6-card {
+  background:#111827; border:1px solid #1f2937; border-radius:10px;
+  padding:14px 16px; display:flex; flex-direction:column; gap:8px;
+  transition:border-color .2s;
+}
+.k6-card:hover { border-color:#374151; }
+.k6-card-label { font-size:11px; color:#6b7280; font-weight:600; text-transform:uppercase; }
+.k6-card-value { font-size:22px; font-weight:700; color:#f1f5f9; }
+.k6-card-sub { font-size:11px; color:#9ca3af; }
+.k6-card-value.ok { color:#22c55e; }
+.k6-card-value.warn { color:#f59e0b; }
+.k6-card-value.danger { color:#ef4444; }
+.k6-progress { height:4px; background:#1f2937; border-radius:2px; overflow:hidden; margin-top:4px; }
+.k6-progress-bar { height:100%; border-radius:2px; transition:width .5s; }
+
+/* ── Charts ────────────────────────────────────────────────── */
+.k6-charts-row { display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:20px; }
+@media(max-width:900px){ .k6-charts-row{grid-template-columns:1fr;} }
+.k6-chart-panel {
+  background:#111827; border:1px solid #1f2937; border-radius:10px; padding:16px;
+}
+.k6-chart-title { font-size:12px; font-weight:600; color:#9ca3af; margin-bottom:10px; }
+
+/* ── Live Test Banner ──────────────────────────────────────── */
+.k6-active-banner {
+  background:linear-gradient(135deg,#1c1917,#1a1a2e);
+  border:1px solid #dc2626; border-radius:10px;
+  padding:16px; margin-bottom:20px;
+}
+.k6-live-cards { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin-bottom:12px; }
+@media(max-width:900px){ .k6-live-cards{grid-template-columns:repeat(3,1fr);} }
+.k6-live-card {
+  background:#0a0a0a; border:1px solid #374151; border-radius:8px;
+  padding:10px; text-align:center;
+}
+.k6-lv-label { display:block; font-size:10px; color:#6b7280; font-weight:600; text-transform:uppercase; margin-bottom:4px; }
+.k6-lv-val { font-size:20px; font-weight:700; color:#f1f5f9; }
+.k6-lv-val.err { color:#ef4444; }
+
+/* ── Tables ────────────────────────────────────────────────── */
+.k6-table {
+  width:100%; border-collapse:collapse; background:#111827;
+  border-radius:10px; overflow:hidden; margin-bottom:20px;
+  border:1px solid #1f2937;
+}
+.k6-table th {
+  background:#1f2937; color:#9ca3af; font-size:11px;
+  text-transform:uppercase; letter-spacing:.5px;
+  padding:10px 14px; text-align:left;
+}
+.k6-table td { padding:10px 14px; border-bottom:1px solid #1a1a2a; font-size:13px; color:#d1d5db; }
+.k6-table tr:last-child td { border-bottom:none; }
+.k6-table tr:hover td { background:#1a2233; }
+.k6-badge-status {
+  padding:2px 8px; border-radius:10px; font-size:11px; font-weight:600;
+}
+.k6-badge-status.running { background:#7f1d1d; color:#fca5a5; }
+.k6-badge-status.completed { background:#14532d; color:#86efac; }
+.k6-badge-status.failed { background:#7f1d1d; color:#fca5a5; }
+.k6-badge-status.ready { background:#1e3a5f; color:#93c5fd; }
+
+/* ── Builder Form ──────────────────────────────────────────── */
+.k6-builder { background:#111827; border:1px solid #1f2937; border-radius:10px; padding:20px; }
+.k6-form-row { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.k6-form-row.six { grid-template-columns:repeat(6,1fr); }
+@media(max-width:768px){ .k6-form-row,.k6-form-row.six{grid-template-columns:1fr;} }
+.k6-form-group label { display:block; font-size:11px; font-weight:600; color:#9ca3af; margin-bottom:4px; text-transform:uppercase; }
+.k6-input {
+  width:100%; background:#0a0a0a; border:1px solid #374151; color:#f1f5f9;
+  padding:8px 10px; border-radius:6px; font-size:13px;
+}
+.k6-input:focus { outline:none; border-color:#f97316; }
+.k6-select { width:100%; background:#0a0a0a; border:1px solid #374151; color:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:13px; }
+
+/* ── Endpoint Row ──────────────────────────────────────────── */
+.k6-ep-row {
+  background:#0a0a0a; border:1px solid #1f2937; border-radius:8px;
+  padding:12px; margin-bottom:8px;
+  display:grid; grid-template-columns:80px 1fr 100px 80px auto;
+  gap:8px; align-items:center;
+}
+@media(max-width:900px){ .k6-ep-row{grid-template-columns:1fr 1fr; grid-template-rows:auto auto auto;} }
+
+/* ── Buttons ───────────────────────────────────────────────── */
+.k6-btn {
+  padding:8px 18px; border-radius:6px; font-size:13px; font-weight:600;
+  cursor:pointer; border:none; transition:all .2s; display:inline-flex;
+  align-items:center; gap:6px;
+}
+.k6-btn.primary { background:#f97316; color:#fff; }
+.k6-btn.primary:hover { background:#ea580c; }
+.k6-btn.success { background:#16a34a; color:#fff; }
+.k6-btn.success:hover { background:#15803d; }
+.k6-btn.danger { background:#dc2626; color:#fff; }
+.k6-btn.danger:hover { background:#b91c1c; }
+.k6-btn.default { background:#1f2937; color:#d1d5db; border:1px solid #374151; }
+.k6-btn.default:hover { background:#374151; }
+.k6-btn.sm { padding:5px 12px; font-size:12px; }
+.k6-btn.icon { padding:5px 8px; background:transparent; border:1px solid #374151; color:#ef4444; border-radius:4px; }
+
+/* ── Alerts ────────────────────────────────────────────────── */
+.k6-alert { padding:10px 14px; border-radius:6px; font-size:13px; margin-bottom:10px; }
+.k6-alert.success { background:#14532d; color:#86efac; border:1px solid #16a34a; }
+.k6-alert.danger  { background:#7f1d1d; color:#fca5a5; border:1px solid #dc2626; }
+.k6-alert.info    { background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; }
+</style>
+{% endblock %}
+
+{% block page_content %}
+<!-- ── Top Bar ─────────────────────────────────────────────── -->
+<div class="k6-topbar">
+  <div class="k6-brand">
+    <span class="k6-logo">⚡</span>
+    <span class="k6-title">K6 Performance Monitor</span>
+    <span class="k6-badge" id="k6-live-badge">● LIVE</span>
+  </div>
+  <div class="k6-tabs">
+    <button class="k6-tab active" data-tab="dashboard">📊 Dashboard</button>
+    <button class="k6-tab" data-tab="loadtest">🚀 Load Tests</button>
+    <button class="k6-tab" data-tab="builder">🔧 Test Builder</button>
+    <button class="k6-tab" data-tab="history">📋 History</button>
+  </div>
+  <div class="k6-topbar-right">
+    <div class="k6-ext-btns">
+      {% if grafana_url %}<a href="{{ grafana_url }}" target="_blank" class="k6-ext-btn grafana">📈 Grafana</a>{% endif %}
+      {% if prometheus_url %}<a href="{{ prometheus_url }}" target="_blank" class="k6-ext-btn prometheus">📊 Prometheus</a>{% endif %}
+      <a href="/k6-help" target="_blank" class="k6-ext-btn help">📖 Help</a>
+    </div>
+    <span class="k6-last-refresh" id="k6-last-refresh">–</span>
+    <button class="k6-btn-refresh" id="k6-refresh-btn" title="Refresh">↺</button>
+  </div>
+</div>
+
+<!-- ── Main ───────────────────────────────────────────────── -->
+<div class="k6-main">
+
+  <!-- ── Dashboard Tab ─────────────────────────────────────── -->
+  <div class="k6-tab-content active" id="tab-dashboard">
+    <div class="k6-section-label">🖥 Infrastructure Health</div>
+    <div class="k6-cards-row">
+      <div class="k6-card"><div class="k6-card-label">CPU Usage</div><div class="k6-card-value" id="val-cpu">–</div><div class="k6-progress"><div class="k6-progress-bar" id="bar-cpu"></div></div></div>
+      <div class="k6-card"><div class="k6-card-label">Memory</div><div class="k6-card-value" id="val-mem">–</div><div class="k6-card-sub" id="sub-mem">–</div><div class="k6-progress"><div class="k6-progress-bar" id="bar-mem"></div></div></div>
+      <div class="k6-card"><div class="k6-card-label">Disk</div><div class="k6-card-value" id="val-disk">–</div><div class="k6-card-sub" id="sub-disk">–</div><div class="k6-progress"><div class="k6-progress-bar" id="bar-disk"></div></div></div>
+      <div class="k6-card"><div class="k6-card-label">⚡ Redis</div><div class="k6-card-value" id="val-redis">–</div><div class="k6-card-sub" id="sub-redis">–</div></div>
+      <div class="k6-card"><div class="k6-card-label">🗄 Database</div><div class="k6-card-value" id="val-db">–</div><div class="k6-card-sub" id="sub-db">–</div></div>
+      <div class="k6-card"><div class="k6-card-label">👷 Workers</div><div class="k6-card-value" id="val-workers">–</div><div class="k6-card-sub" id="sub-workers">–</div></div>
+    </div>
+    <div class="k6-charts-row">
+      <div class="k6-chart-panel"><div class="k6-chart-title">CPU &amp; Memory History</div><canvas id="chart-sysmetrics" height="100"></canvas></div>
+      <div class="k6-chart-panel"><div class="k6-chart-title">Network I/O (MB/s)</div><canvas id="chart-network" height="100"></canvas></div>
+    </div>
+
+    <!-- Active test banner -->
+    <div id="k6-active-banner" style="display:none">
+      <div class="k6-section-label">🔴 Active Load Test</div>
+      <div class="k6-live-cards">
+        <div class="k6-live-card"><span class="k6-lv-label">RPS</span><span class="k6-lv-val" id="lv-rps">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Avg ms</span><span class="k6-lv-val" id="lv-avg">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">P95 ms</span><span class="k6-lv-val" id="lv-p95">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Requests</span><span class="k6-lv-val" id="lv-reqs">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">Errors</span><span class="k6-lv-val err" id="lv-errs">–</span></div>
+        <div class="k6-live-card"><span class="k6-lv-label">VUs</span><span class="k6-lv-val" id="lv-vus">–</span></div>
+      </div>
+      <div class="k6-chart-panel" style="margin-top:12px"><div class="k6-chart-title">Live: Requests &amp; Response Time</div><canvas id="chart-live" height="90"></canvas></div>
+      <div style="margin-top:10px;text-align:right"><button class="k6-btn danger sm" id="btn-stop-active">⏹ Stop Test</button></div>
+    </div>
+  </div>
+
+  <!-- ── Load Tests Tab ────────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-loadtest">
+    <div class="k6-section-label">🚀 Saved Load Test Configurations</div>
+    <div style="margin-bottom:12px">
+      <button class="k6-btn primary sm" id="btn-goto-builder">+ New Test Config</button>
+    </div>
+    <table class="k6-table">
+      <thead><tr><th>Name</th><th>Scenario</th><th>VUs</th><th>Duration</th><th>Status</th><th>Last Run</th><th>Actions</th></tr></thead>
+      <tbody id="configs-tbody"><tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+  <!-- ── Builder Tab ───────────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-builder">
+    <div class="k6-section-label">🔧 Build New Load Test</div>
+    <div class="k6-builder">
+      <div class="k6-form-row">
+        <div class="k6-form-group"><label>Test Name *</label><input class="k6-input" id="b-name" placeholder="My API Load Test"></div>
+        <div class="k6-form-group"><label>Scenario</label>
+          <select class="k6-select" id="b-scenario">
+            <option value="smoke">Smoke – 2 VUs, 1 min</option>
+            <option value="load" selected>Load – normal traffic</option>
+            <option value="stress">Stress – find breaking point</option>
+            <option value="spike">Spike – sudden burst</option>
+            <option value="soak">Soak – long endurance</option>
+          </select>
+        </div>
+      </div>
+      <div class="k6-form-row six">
+        <div class="k6-form-group"><label>VUs</label><input class="k6-input" type="number" id="b-vus" value="10" min="1"></div>
+        <div class="k6-form-group"><label>Duration</label><input class="k6-input" id="b-duration" value="5m"></div>
+        <div class="k6-form-group"><label>Ramp Up</label><input class="k6-input" id="b-ramp-up" value="1m"></div>
+        <div class="k6-form-group"><label>Ramp Down</label><input class="k6-input" id="b-ramp-down" value="30s"></div>
+        <div class="k6-form-group"><label>Max VUs</label><input class="k6-input" type="number" id="b-max-vus" value="100"></div>
+        <div class="k6-form-group"><label>Think Time (s)</label><input class="k6-input" type="number" id="b-think" value="1" step="0.1"></div>
+      </div>
+      <div class="k6-section-label" style="margin-top:16px">API Endpoints</div>
+      <div id="ep-list"></div>
+      <button class="k6-btn default sm" id="btn-add-ep" style="margin-bottom:16px">+ Add Endpoint</button>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button class="k6-btn primary" id="btn-save">💾 Save Config</button>
+        <button class="k6-btn success" id="btn-save-run">💾 Save &amp; Run</button>
+        <button class="k6-btn default" id="btn-clear">✕ Clear</button>
+      </div>
+      <div id="builder-msg" style="margin-top:12px"></div>
+    </div>
+  </div>
+
+  <!-- ── History Tab ───────────────────────────────────────── -->
+  <div class="k6-tab-content" id="tab-history">
+    <div class="k6-section-label">📋 Test Run History</div>
+    <table class="k6-table">
+      <thead><tr><th>Run</th><th>Config</th><th>Scenario</th><th>Status</th><th>Started</th><th>Requests</th><th>Errors</th><th>RPS</th><th>Avg ms</th><th>P95 ms</th></tr></thead>
+      <tbody id="history-tbody"><tr><td colspan="10" style="text-align:center;color:#6b7280;padding:24px">Loading…</td></tr></tbody>
+    </table>
+  </div>
+
+</div><!-- /.k6-main -->
+
+<!-- Chart.js (local asset) -->
+<script src="/assets/frappe_k6/js/chart.umd.min.js"></script>
+
+<!-- Page config — isolated so a Jinja render failure never breaks the main script -->
+<script>window._k6Cfg={refresh:{{ refresh_interval }},grafana:"{{ grafana_url }}",prometheus:"{{ prometheus_url }}"};</script>
+
+<script>
+function _k6Init() {
+  if (window._k6Started) return;
+  window._k6Started = true;
+  var _cfg = window._k6Cfg || {};
+  var REFRESH = (_cfg.refresh && _cfg.refresh > 0) ? _cfg.refresh : 5000;
+  var activeRun = null;
+  var charts = {};
+  var sysH = {labels:[], cpu:[], mem:[], netSent:[], netRecv:[]};
+  var prevNet = {sent: 0, recv: 0, ts: 0};
+  var liveH = {labels:[], rps:[], avg:[]};
+  var epCount = 0;
+  var _timers = [];
+
+  /* ── Tabs ─────────────────────────────────────────────────── */
+  document.querySelectorAll(".k6-tab").forEach(function(btn) {
+    btn.addEventListener("click", function() {
+      document.querySelectorAll(".k6-tab").forEach(function(b){ b.classList.remove("active"); });
+      document.querySelectorAll(".k6-tab-content").forEach(function(c){ c.classList.remove("active"); });
+      btn.classList.add("active");
+      var id = "tab-" + btn.dataset.tab;
+      document.getElementById(id).classList.add("active");
+      /* resize charts after tab becomes visible */
+      setTimeout(function() {
+        Object.values(charts).forEach(function(c) { if (c && c.resize) c.resize(); });
+      }, 50);
+    });
+  });
+
+  /* ── Toast ────────────────────────────────────────────────── */
+  function toast(msg, type) {
+    if (window.frappe && frappe.show_alert) {
+      frappe.show_alert({message: msg, indicator: type === "success" ? "green" : type === "danger" ? "red" : "blue"}, 4);
+    } else {
+      console.log("[k6]", msg);
+    }
+  }
+
+  /* ── API helper (native fetch — works in www context) ───────── */
+  function getCsrf() {
+    /* frappe.csrf_token is injected at page bottom by Frappe's web template */
+    if (window.frappe && frappe.csrf_token && frappe.csrf_token !== 'None') return frappe.csrf_token;
+    var m = document.querySelector('meta[name="csrf-token"]');
+    return m ? m.getAttribute('content') : '';
+  }
+  function api(method, args, cb) {
+    fetch('/api/method/' + method, {
+      method: 'POST',
+      credentials: 'same-origin',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Frappe-CSRF-Token': getCsrf(),
+        'Accept': 'application/json',
+      },
+      body: JSON.stringify(args || {}),
+    })
+    .then(function(res) { return res.json(); })
+    .then(function(r) {
+      if (r && r.message !== undefined) cb && cb(r.message);
+      else if (r && r.exc) console.error('[k6 api]', method, r.exc);
+    })
+    .catch(function(e) { console.error('[k6 fetch error]', method, e); });
+  }
+
+  /* ── System Metrics ───────────────────────────────────────── */
+  function fetchMetrics() {
+    api("frappe_k6.api.system_metrics.get_all_metrics", {}, function(d) {
+      if (!d) return;
+      var now = new Date().toLocaleTimeString();
+
+      // CPU
+      var cpu = d.cpu || {};
+      var cpuPct = cpu.percent || 0;
+      setVal("val-cpu", cpuPct.toFixed(1) + "%", cpuPct > 80 ? "danger" : cpuPct > 60 ? "warn" : "ok");
+      setBar("bar-cpu", cpuPct, cpuPct > 80 ? "#ef4444" : "#22c55e");
+
+      // Memory
+      var mem = d.memory || {};
+      var memPct = mem.percent || 0;
+      setVal("val-mem", memPct.toFixed(1) + "%", memPct > 85 ? "danger" : memPct > 70 ? "warn" : "ok");
+      setText("sub-mem", "Used " + (mem.used_gb || 0).toFixed(1) + "GB / " + (mem.total_gb || 0).toFixed(1) + "GB");
+      setBar("bar-mem", memPct, memPct > 85 ? "#ef4444" : "#3b82f6");
+
+      // Disk
+      var disk = d.disk || {};
+      var diskPct = disk.percent || 0;
+      setVal("val-disk", diskPct.toFixed(1) + "%", diskPct > 90 ? "danger" : diskPct > 75 ? "warn" : "ok");
+      setText("sub-disk", "Free " + (disk.free_gb || 0).toFixed(1) + "GB");
+      setBar("bar-disk", diskPct, diskPct > 90 ? "#ef4444" : "#8b5cf6");
+
+      // Redis
+      var redis = d.redis || {};
+      var redisOk = redis.status === "connected";
+      setVal("val-redis", redisOk ? "OK" : "ERR", redisOk ? "ok" : "danger");
+      setText("sub-redis", "Hit " + (redis.hit_ratio || 0) + "% · " + (redis.connected_clients || 0) + " clients");
+
+      // DB
+      var db = d.database || {};
+      var dbOk = db.status === "connected";
+      setVal("val-db", dbOk ? "OK" : "ERR", dbOk ? "ok" : "danger");
+      setText("sub-db", (db.connections || 0) + " conn · " + (db.slow_queries || 0) + " slow");
+
+      // Workers
+      var w = d.workers || {};
+      var g = d.gunicorn || {};
+      var qs = d.queues || {};
+      var totalQ = (qs.default || 0) + (qs.long || 0) + (qs.short || 0);
+      setVal("val-workers", (w.count || 0) + " workers", (w.count || 0) > 0 ? "ok" : "warn");
+      setText("sub-workers", "Q: " + totalQ + " pending · gunicorn: " + (g.count || 0));
+
+      // Charts
+      var net = d.network || {};
+      var nowTs = Date.now();
+      var dtSec = prevNet.ts > 0 ? (nowTs - prevNet.ts) / 1000 : 0;
+      var sentMB = net.bytes_sent_mb || 0;
+      var recvMB = net.bytes_recv_mb || 0;
+      var sentRate = dtSec > 0 ? Math.max(0, sentMB - prevNet.sent) / dtSec : 0;
+      var recvRate = dtSec > 0 ? Math.max(0, recvMB - prevNet.recv) / dtSec : 0;
+      prevNet = {sent: sentMB, recv: recvMB, ts: nowTs};
+      sysH.labels.push(now);
+      sysH.cpu.push(cpuPct);
+      sysH.mem.push(memPct);
+      sysH.netSent.push(sentRate.toFixed(3));
+      sysH.netRecv.push(recvRate.toFixed(3));
+      if (sysH.labels.length > 30) {
+        sysH.labels.shift(); sysH.cpu.shift(); sysH.mem.shift();
+        sysH.netSent.shift(); sysH.netRecv.shift();
+      }
+      updateChart(charts.sys, sysH.labels, [{data:sysH.cpu},{data:sysH.mem}]);
+      updateChart(charts.net, sysH.labels, [{data:sysH.netSent},{data:sysH.netRecv}]);
+
+      setText("k6-last-refresh", "Updated " + now);
+    });
+  }
+
+  /* ── Active Runs ──────────────────────────────────────────── */
+  function checkActive() {
+    api("frappe_k6.api.load_test.get_active_runs", {}, function(runs) {
+      if (runs && runs.length > 0) {
+        activeRun = runs[0].name || runs[0];
+        document.getElementById("k6-active-banner").style.display = "block";
+        fetchLive(activeRun);
+      } else if (activeRun) {
+        api("frappe_k6.api.load_test.get_test_status", {run_name: activeRun}, function(s) {
+          if (s && !s.is_running) {
+            activeRun = null;
+            document.getElementById("k6-active-banner").style.display = "none";
+            fetchHistory();
+          }
+        });
+      }
+    });
+  }
+
+  function fetchLive(run) {
+    if (!run) return;
+    api("frappe_k6.api.load_test.get_test_status", {run_name: run}, function(s) {
+      if (!s) return;
+      var m = s.metrics || {};
+      var dur = m.http_req_duration || {};
+      setText("lv-rps", (m.rps || 0).toFixed(2));
+      setText("lv-avg", (dur.avg || 0).toFixed(0) + "ms");
+      setText("lv-p95", (dur.p95 || 0).toFixed(0) + "ms");
+      setText("lv-reqs", (m.http_reqs || {}).count || 0);
+      setText("lv-errs", (m.http_req_failed || {}).count || 0);
+      setText("lv-vus", (m.vus || {}).current || 0);
+
+      var tl = m.timeline || [];
+      if (tl.length) {
+        var last = tl[tl.length-1];
+        var now = new Date().toLocaleTimeString();
+        liveH.labels.push(now);
+        liveH.rps.push(last.rps || 0);
+        liveH.avg.push(last.avg_ms || last.avg || 0);
+        if (liveH.labels.length > 30) { liveH.labels.shift(); liveH.rps.shift(); liveH.avg.shift(); }
+        updateChart(charts.live, liveH.labels, [{data:liveH.rps},{data:liveH.avg}]);
+      }
+
+      if (!s.is_running) {
+        activeRun = null;
+        document.getElementById("k6-active-banner").style.display = "none";
+        fetchHistory();
+        fetchConfigs();
+      }
+    });
+  }
+
+  /* ── Configs ──────────────────────────────────────────────── */
+  function fetchConfigs() {
+    api("frappe_k6.api.load_test.get_configs", {}, function(list) {
+      var tbody = document.getElementById("configs-tbody");
+      if (!list || !list.length) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:#6b7280;padding:24px">No configurations yet. <a href="#" onclick="document.querySelector(\'[data-tab=builder]\').click();return false">Create one →</a></td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(function(c) {
+        var st = (c.status || "ready").toLowerCase();
+        var badge = '<span class="k6-badge-status ' + st + '">' + (c.status || "Ready") + '</span>';
+        var label = c.test_name || c.name;
+        return '<tr><td><strong>' + label + '</strong></td><td>' + (c.scenario_type || "-") + '</td><td>' + (c.virtual_users || "-") + '</td><td>' + (c.duration || "-") + '</td><td>' + badge + '</td><td>' + (c.last_run || "-") + '</td><td><button class="k6-btn primary sm" onclick="runTest(\'' + c.name + '\')">▶ Run</button></td></tr>';
+      }).join("");
+    });
+  }
+
+  /* ── History ──────────────────────────────────────────────── */
+  function fetchHistory() {
+    api("frappe_k6.api.load_test.get_run_history", {}, function(list) {
+      var tbody = document.getElementById("history-tbody");
+      if (!list || !list.length) {
+        tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;color:#6b7280;padding:24px">No runs yet.</td></tr>';
+        return;
+      }
+      tbody.innerHTML = list.map(function(r) {
+        var badge = '<span class="k6-badge-status ' + (r.status || "").toLowerCase() + '">' + r.status + '</span>';
+        return '<tr><td><small>' + r.name + '</small></td><td>' + (r.config || "-") + '</td><td>' + (r.scenario_type || "-") + '</td><td>' + badge + '</td><td>' + (r.started_at || "-") + '</td><td>' + (r.total_requests || 0) + '</td><td>' + (r.failed_requests || 0) + '</td><td>' + (r.requests_per_sec || 0) + '</td><td>' + (r.avg_duration_ms || 0) + 'ms</td><td>' + (r.p95_duration_ms || 0) + 'ms</td></tr>';
+      }).join("");
+    });
+  }
+
+  /* ── Run test ─────────────────────────────────────────────── */
+  window.runTest = function(name) {
+    toast("Starting test: " + name + "…", "info");
+    api("frappe_k6.api.load_test.start_load_test", {config_name: name}, function(r) {
+      if (r) {
+        toast("✅ Test started! Run: " + r.run_name, "success");
+        activeRun = r.run_name;
+        document.getElementById("k6-active-banner").style.display = "block";
+        document.querySelector("[data-tab='dashboard']").click();
+        fetchConfigs();
+      }
+    });
+  };
+
+  /* ── Stop test ────────────────────────────────────────────── */
+  document.getElementById("btn-stop-active").addEventListener("click", function() {
+    if (!activeRun) return;
+    api("frappe_k6.api.load_test.stop_load_test", {run_name: activeRun}, function() {
+      toast("Test stopped", "info");
+      activeRun = null;
+      document.getElementById("k6-active-banner").style.display = "none";
+      fetchHistory(); fetchConfigs();
+    });
+  });
+
+  /* ── Builder ──────────────────────────────────────────────── */
+  document.getElementById("btn-goto-builder").addEventListener("click", function() {
+    document.querySelector("[data-tab='builder']").click();
+  });
+
+  document.getElementById("btn-add-ep").addEventListener("click", function() { addEpRow(); });
+  document.getElementById("btn-clear").addEventListener("click", function() {
+    document.getElementById("b-name").value = "";
+    document.getElementById("ep-list").innerHTML = "";
+    epCount = 0; addEpRow();
+    showMsg("", "");
+  });
+
+  function addEpRow(ep) {
+    ep = ep || {};
+    epCount++;
+    var n = epCount;
+    var div = document.createElement("div");
+    div.className = "k6-ep-row";
+    div.id = "ep-row-" + n;
+    div.innerHTML = [
+      '<select class="k6-select" id="ep-method-' + n + '"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>',
+      '<input class="k6-input" id="ep-url-' + n + '" placeholder="/api/method/frappe.ping" value="' + (ep.endpoint_url || ep.api_path || "") + '">',
+      '<input class="k6-input" id="ep-name-' + n + '" placeholder="Label" value="' + (ep.api_name || ep.endpoint_label || "") + '">',
+      '<input class="k6-input" type="number" id="ep-weight-' + n + '" value="' + (ep.weight || 1) + '" min="1" placeholder="Weight">',
+      '<button class="k6-btn icon" onclick="document.getElementById(\'ep-row-' + n + '\').remove()">✕</button>',
+    ].join("");
+    if (ep.http_method) div.querySelector("select").value = ep.http_method;
+    document.getElementById("ep-list").appendChild(div);
+  }
+
+  function gatherEps() {
+    var rows = document.querySelectorAll(".k6-ep-row");
+    var eps = [];
+    rows.forEach(function(row) {
+      var n = row.id.replace("ep-row-", "");
+      eps.push({
+        http_method:     document.getElementById("ep-method-" + n).value,
+        endpoint_url:    document.getElementById("ep-url-" + n).value.trim(),
+        api_name:        document.getElementById("ep-name-" + n).value.trim() || "Endpoint",
+        expected_status: 200,
+        weight:          parseInt(document.getElementById("ep-weight-" + n).value) || 1,
+      });
+    });
+    return eps;
+  }
+
+  function buildPayload() {
+    return {
+      config_name: document.getElementById("b-name").value.trim(),
+      test_scenario: document.getElementById("b-scenario").value,
+      virtual_users: parseInt(document.getElementById("b-vus").value) || 10,
+      duration: document.getElementById("b-duration").value.trim(),
+      ramp_up: document.getElementById("b-ramp-up").value.trim(),
+      ramp_down: document.getElementById("b-ramp-down").value.trim(),
+      max_vus: parseInt(document.getElementById("b-max-vus").value) || 100,
+      think_time: parseFloat(document.getElementById("b-think").value) || 1,
+      endpoints: gatherEps(),
+    };
+  }
+
+  function showMsg(txt, type) {
+    var el = document.getElementById("builder-msg");
+    el.innerHTML = txt ? '<div class="k6-alert ' + (type || "info") + '">' + txt + '</div>' : "";
+  }
+
+  document.getElementById("btn-save").addEventListener("click", function() {
+    var p = buildPayload();
+    if (!p.config_name) { showMsg("Test name is required.", "danger"); return; }
+    if (!p.endpoints.length) { showMsg("Add at least one endpoint.", "danger"); return; }
+    api("frappe_k6.api.load_test.save_config", p, function(r) {
+      if (r && r.name) { showMsg("✅ Config saved: " + r.name, "success"); fetchConfigs(); }
+    });
+  });
+
+  document.getElementById("btn-save-run").addEventListener("click", function() {
+    var p = buildPayload();
+    if (!p.config_name) { showMsg("Test name is required.", "danger"); return; }
+    if (!p.endpoints.length) { showMsg("Add at least one endpoint.", "danger"); return; }
+    api("frappe_k6.api.load_test.save_config", p, function(r) {
+      if (r && r.name) {
+        showMsg("✅ Saved! Starting run…", "success");
+        runTest(r.name);
+      }
+    });
+  });
+
+  /* ── Charts ───────────────────────────────────────────────── */
+  function initCharts() {
+    if (!window.Chart) return;
+    Chart.defaults.color = "#6b7280";
+    var base = {
+      responsive:true, animation:false,
+      plugins:{legend:{display:true, labels:{color:"#9ca3af", font:{size:11}}}},
+      scales:{
+        x:{ticks:{color:"#6b7280",maxTicksLimit:8}, grid:{color:"#1f2937"}},
+        y:{ticks:{color:"#6b7280"}, grid:{color:"#1f2937"}},
+      }
+    };
+
+    charts.sys = new Chart(document.getElementById("chart-sysmetrics"), {
+      type:"line",
+      data:{labels:[], datasets:[
+        {label:"CPU %",   data:[], borderColor:"#f97316", backgroundColor:"rgba(249,115,22,.12)", tension:.3, fill:true},
+        {label:"Mem %",   data:[], borderColor:"#3b82f6", backgroundColor:"rgba(59,130,246,.12)", tension:.3, fill:true},
+      ]},
+      options: Object.assign({}, base)
+    });
+    charts.net = new Chart(document.getElementById("chart-network"), {
+      type:"line",
+      data:{labels:[], datasets:[
+        {label:"Sent MB/s", data:[], borderColor:"#22c55e", backgroundColor:"rgba(34,197,94,.12)", tension:.3, fill:true},
+        {label:"Recv MB/s", data:[], borderColor:"#a855f7", backgroundColor:"rgba(168,85,247,.12)", tension:.3, fill:true},
+      ]},
+      options: Object.assign({}, base)
+    });
+    charts.live = new Chart(document.getElementById("chart-live"), {
+      type:"line",
+      data:{labels:[], datasets:[
+        {label:"RPS",     data:[], borderColor:"#f97316", tension:.3},
+        {label:"Avg ms",  data:[], borderColor:"#3b82f6", tension:.3, yAxisID:"y2"},
+      ]},
+      options: Object.assign({}, base, {scales: Object.assign({}, base.scales, {
+        y2:{type:"linear", position:"right", ticks:{color:"#6b7280"}, grid:{drawOnChartArea:false}},
+      })})
+    });
+  }
+
+  function updateChart(chart, labels, datasets) {
+    if (!chart) return;
+    chart.data.labels = labels;
+    datasets.forEach(function(d, i) {
+      if (chart.data.datasets[i]) chart.data.datasets[i].data = d.data;
+    });
+    chart.update("none");
+  }
+
+  /* ── Helpers ──────────────────────────────────────────────── */
+  function setVal(id, val, cls) {
+    var el = document.getElementById(id);
+    if (!el) return;
+    el.textContent = val;
+    el.className = "k6-card-value" + (cls ? " " + cls : "");
+  }
+  function setText(id, val) { var el = document.getElementById(id); if (el) el.textContent = val; }
+  function setBar(id, pct, color) {
+    var el = document.getElementById(id);
+    if (el) { el.style.width = Math.min(100, pct) + "%"; el.style.background = color; }
+  }
+  function mb(b) { return b ? (b/1048576).toFixed(0) + "MB" : "–"; }
+  function gb(b) { return b ? (b/1073741824).toFixed(1) + "GB" : "–"; }
+
+  /* ── Polling ──────────────────────────────────────────────── */
+  function startPolling() {
+    fetchMetrics(); fetchConfigs(); fetchHistory(); checkActive();
+    _timers.push(setInterval(fetchMetrics, REFRESH));
+    _timers.push(setInterval(checkActive, 3000));
+    _timers.push(setInterval(function(){fetchConfigs();fetchHistory();}, 15000));
+  }
+
+  /* ── Refresh button ───────────────────────────────────────── */
+  document.getElementById("k6-refresh-btn").addEventListener("click", function() {
+    fetchMetrics(); checkActive(); fetchConfigs(); fetchHistory();
+  });
+
+  /* ── Init ─────────────────────────────────────────────────── */
+  addEpRow();
+  initCharts();
+  startPolling();
+}
+
+/* Fire on DOMContentLoaded and frappe.ready — whichever comes first */
+document.addEventListener("DOMContentLoaded", _k6Init);
+if (window.frappe && frappe.ready) { frappe.ready(_k6Init); }
+setTimeout(_k6Init, 800); /* hard fallback */
+</script>
+{% endblock %}

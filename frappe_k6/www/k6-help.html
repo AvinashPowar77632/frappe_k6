@@ -1,0 +1,664 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>frappe_k6 — User Manual</title>
+<style>
+:root{--blue:#4361ee;--green:#2dc653;--red:#e63946;--yellow:#f4a261;--gray:#6c757d;--light:#f8f9fa;--border:#dee2e6;--text:#212529;--shadow:0 2px 8px rgba(0,0,0,.08)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:"Inter","Segoe UI",sans-serif;font-size:15px;line-height:1.7;color:var(--text);background:#fff}
+a{color:var(--blue);text-decoration:none}a:hover{text-decoration:underline}
+
+/* ── Layout ── */
+.layout{display:flex;min-height:100vh}
+nav.sidebar{width:260px;min-width:260px;background:#1a1f36;color:#c9d1e0;position:sticky;top:0;height:100vh;overflow-y:auto;padding:0 0 32px}
+.sidebar-brand{padding:22px 20px 16px;border-bottom:1px solid rgba(255,255,255,.08);display:flex;align-items:center;gap:10px}
+.sidebar-brand .logo{width:36px;height:36px;background:var(--blue);border-radius:8px;display:grid;place-items:center;font-weight:700;color:#fff;font-size:16px}
+.sidebar-brand h1{font-size:15px;font-weight:600;color:#fff;line-height:1.2}
+.sidebar-brand small{font-size:11px;color:#8892a4}
+nav.sidebar ul{list-style:none;padding:12px 0}
+nav.sidebar ul li a{display:block;padding:7px 20px;font-size:13px;color:#c9d1e0;border-left:3px solid transparent;transition:all .15s}
+nav.sidebar ul li a:hover,nav.sidebar ul li a.active{background:rgba(255,255,255,.06);color:#fff;border-left-color:var(--blue);text-decoration:none}
+.nav-section{padding:16px 20px 4px;font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#56607a;font-weight:600}
+
+main{flex:1;padding:40px 48px;max-width:900px}
+@media(max-width:768px){.layout{flex-direction:column}nav.sidebar{width:100%;height:auto;position:relative}.sidebar{display:none}main{padding:24px 20px}}
+
+/* ── Typography ── */
+h2{font-size:24px;font-weight:700;margin:40px 0 12px;padding-bottom:8px;border-bottom:2px solid var(--border);color:#1a1f36}
+h2:first-child{margin-top:0}
+h3{font-size:17px;font-weight:600;margin:28px 0 8px;color:#1a1f36}
+h4{font-size:14px;font-weight:600;margin:16px 0 6px;color:var(--gray)}
+p{margin-bottom:12px}
+ul,ol{margin:10px 0 14px 22px}
+li{margin-bottom:5px}
+code{font-family:"JetBrains Mono","Fira Code",monospace;font-size:13px;background:#eef0f5;padding:1px 6px;border-radius:4px;color:#c0392b}
+pre{background:#1a1f36;color:#e2e8f0;padding:18px 20px;border-radius:8px;overflow-x:auto;margin:12px 0 18px;font-size:13px;line-height:1.6}
+pre code{background:none;color:inherit;padding:0;font-size:13px}
+
+/* ── Badges ── */
+.badge{display:inline-block;font-size:11px;font-weight:600;padding:2px 8px;border-radius:20px;vertical-align:middle}
+.badge-blue{background:#dbeafe;color:#1d4ed8}
+.badge-green{background:#dcfce7;color:#166534}
+.badge-yellow{background:#fef9c3;color:#854d0e}
+.badge-red{background:#fee2e2;color:#991b1b}
+
+/* ── Callout boxes ── */
+.callout{border-left:4px solid;border-radius:0 8px 8px 0;padding:14px 16px;margin:16px 0;font-size:14px}
+.callout-info{background:#eff6ff;border-color:var(--blue)}
+.callout-success{background:#f0fdf4;border-color:var(--green)}
+.callout-warning{background:#fffbeb;border-color:var(--yellow)}
+.callout-danger{background:#fff1f2;border-color:var(--red)}
+.callout strong{display:block;margin-bottom:4px;font-size:13px;text-transform:uppercase;letter-spacing:.04em}
+
+/* ── Table ── */
+table{width:100%;border-collapse:collapse;margin:14px 0 20px;font-size:14px}
+th{background:#f1f3f9;padding:10px 14px;text-align:left;font-weight:600;border:1px solid var(--border)}
+td{padding:9px 14px;border:1px solid var(--border);vertical-align:top}
+tr:nth-child(even){background:#fafbfd}
+
+/* ── Steps ── */
+.step{display:flex;gap:16px;margin:12px 0;align-items:flex-start}
+.step-num{min-width:28px;height:28px;background:var(--blue);color:#fff;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:700;margin-top:2px}
+.step-body{flex:1}
+.step-body strong{display:block;margin-bottom:2px}
+
+/* ── Hero ── */
+.hero{background:linear-gradient(135deg,#1a1f36 0%,#2d3561 100%);color:#fff;padding:36px 40px;border-radius:12px;margin-bottom:36px}
+.hero h1{font-size:28px;font-weight:700;margin-bottom:8px}
+.hero p{color:#a5b4c8;font-size:15px;margin:0}
+.hero-badges{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+.hero-badge{background:rgba(255,255,255,.1);color:#fff;padding:4px 12px;border-radius:20px;font-size:12px;font-weight:500}
+
+/* ── Service card ── */
+.service-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:16px 0 24px}
+.service-card{border:1px solid var(--border);border-radius:10px;padding:16px;text-align:center}
+.service-card .icon{font-size:28px;margin-bottom:8px}
+.service-card strong{display:block;font-size:14px}
+.service-card span{font-size:12px;color:var(--gray)}
+
+/* ── Config card ── */
+.config-card{border:1px solid var(--border);border-radius:10px;padding:18px 20px;margin:12px 0;background:#fafbfd}
+.config-card .field-name{font-family:monospace;font-size:13px;font-weight:700;color:var(--blue);margin-bottom:6px}
+.config-card .field-meta{display:flex;gap:8px;margin:8px 0;flex-wrap:wrap}
+
+/* ── TOC top ── */
+#toc-top{display:none}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ── Sidebar ── -->
+<nav class="sidebar">
+  <div class="sidebar-brand">
+    <div class="logo">K6</div>
+    <div><h1>frappe_k6</h1><small>User Manual</small></div>
+  </div>
+  <ul>
+    <li><span class="nav-section">Getting Started</span></li>
+    <li><a href="#prerequisites">1. Prerequisites</a></li>
+    <li><a href="#installation">2. Installation</a></li>
+    <li><a href="#verify">3. Verify Installation</a></li>
+
+    <li><span class="nav-section">Configuration</span></li>
+    <li><a href="#monitor-settings">4. Monitor Settings</a></li>
+    <li><a href="#settings-reference">5. Settings Reference</a></li>
+
+    <li><span class="nav-section">Using the App</span></li>
+    <li><a href="#dashboard">6. K6 Dashboard</a></li>
+    <li><a href="#grafana">7. Grafana</a></li>
+    <li><a href="#prometheus">8. Prometheus</a></li>
+    <li><a href="#load-testing">9. Load Testing</a></li>
+
+    <li><span class="nav-section">Support</span></li>
+    <li><a href="#troubleshooting">10. Troubleshooting</a></li>
+    <li><a href="#best-practices">11. Best Practices</a></li>
+  </ul>
+</nav>
+
+<!-- ── Main content ── -->
+<main>
+
+<div class="hero">
+  <h1>frappe_k6 — User Manual</h1>
+  <p>Complete guide to installing, configuring, and running load tests with K6, Prometheus, and Grafana on any Frappe site.</p>
+  <div class="hero-badges">
+    <span class="hero-badge">K6 v2+</span>
+    <span class="hero-badge">Frappe v15 / v16</span>
+    <span class="hero-badge">Prometheus v2.52</span>
+    <span class="hero-badge">Grafana v10+</span>
+    <span class="hero-badge">Ubuntu / Debian</span>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="prerequisites">1. Prerequisites</h2>
+
+<h3>System Requirements</h3>
+<table>
+  <tr><th>Resource</th><th>Minimum</th><th>Recommended</th></tr>
+  <tr><td>CPU</td><td>2 cores</td><td>4+ cores</td></tr>
+  <tr><td>RAM</td><td>4 GB</td><td>8+ GB</td></tr>
+  <tr><td>Disk</td><td>20 GB free</td><td>50+ GB (for reports &amp; TSDB)</td></tr>
+  <tr><td>OS</td><td colspan="2">Ubuntu 20.04 / 22.04 / 24.04 &nbsp;·&nbsp; Debian 11+</td></tr>
+</table>
+
+<h3>Required Software (installed automatically)</h3>
+<div class="service-grid">
+  <div class="service-card"><div class="icon">⚡</div><strong>K6</strong><span>Load testing — port n/a</span></div>
+  <div class="service-card"><div class="icon">📊</div><strong>Prometheus</strong><span>Metrics DB — port 9090</span></div>
+  <div class="service-card"><div class="icon">📈</div><strong>Grafana</strong><span>Dashboards — port 3000</span></div>
+  <div class="service-card"><div class="icon">🖥️</div><strong>node_exporter</strong><span>Host metrics — port 9100</span></div>
+  <div class="service-card"><div class="icon">🔌</div><strong>K6 Exporter</strong><span>Frappe metrics — port 9200</span></div>
+</div>
+
+<h3>Network / Firewall Ports</h3>
+<table>
+  <tr><th>Port</th><th>Service</th><th>Direction</th><th>Required?</th></tr>
+  <tr><td><code>3000</code></td><td>Grafana UI</td><td>Inbound (browser)</td><td><span class="badge badge-green">Yes</span></td></tr>
+  <tr><td><code>9090</code></td><td>Prometheus UI + API</td><td>Inbound (browser &amp; scrape)</td><td><span class="badge badge-green">Yes</span></td></tr>
+  <tr><td><code>9100</code></td><td>node_exporter</td><td>Localhost only</td><td><span class="badge badge-blue">Internal</span></td></tr>
+  <tr><td><code>9200</code></td><td>frappe_k6 exporter</td><td>Localhost only</td><td><span class="badge badge-blue">Internal</span></td></tr>
+  <tr><td><code>8000–8100</code></td><td>Frappe / gunicorn</td><td>Inbound (browser)</td><td><span class="badge badge-green">Yes</span></td></tr>
+</table>
+
+<div class="callout callout-warning">
+  <strong>⚠ Firewall</strong>
+  Open ports 3000 and 9090 from your workstation IP to access Grafana and Prometheus in a browser.
+  Ports 9100 and 9200 should remain localhost-only.
+</div>
+
+<h3>Prerequisites on the Server</h3>
+<ul>
+  <li><strong>sudo access</strong> — the install script creates systemd services</li>
+  <li><strong>curl / wget</strong> — used to download binaries</li>
+  <li><strong>apt-get</strong> — Debian/Ubuntu package manager</li>
+  <li>Frappe bench already set up with at least one site</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="installation">2. Installation</h2>
+
+<h3>Step 1 — Get the app into your bench</h3>
+<pre><code>cd /path/to/your/bench
+bench get-app https://github.com/your-org/frappe_k6.git</code></pre>
+
+<h3>Step 2 — Install on a site</h3>
+<pre><code>bench --site &lt;your-site.com&gt; install-app frappe_k6</code></pre>
+
+<div class="callout callout-info">
+  <strong>ℹ What happens automatically</strong>
+  The installer runs a full plug-and-play setup:
+  <ul style="margin-top:8px">
+    <li>Creates the <code>k6_tests/reports/</code> directory</li>
+    <li>Populates <strong>Monitor Settings</strong> with your server IP, ports, and paths</li>
+    <li>Creates 6 sample Load Test Configs (smoke, load, stress, spike, soak, custom)</li>
+    <li>Installs K6 via APT (if not present)</li>
+    <li>Downloads and starts <strong>node_exporter</strong> on port 9100</li>
+    <li>Downloads and starts <strong>Prometheus</strong> on port 9090</li>
+    <li>Starts the <strong>frappe_k6 exporter</strong> on port 9200</li>
+    <li>Installs and starts <strong>Grafana</strong> on port 3000, with Prometheus datasource &amp; dashboard pre-loaded</li>
+  </ul>
+</div>
+
+<h3>Step 3 — Build assets</h3>
+<pre><code>bench build --app frappe_k6
+bench --site &lt;your-site.com&gt; clear-cache</code></pre>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="verify">3. Verify Installation</h2>
+
+<h3>Check services are running</h3>
+<pre><code>systemctl is-active prometheus grafana-server node_exporter frappe_k6_exporter</code></pre>
+<p>All four should print <code>active</code>.</p>
+
+<h3>Check Prometheus targets</h3>
+<pre><code>curl -s http://localhost:9090/api/v1/targets | \
+  python3 -c "
+import json,sys
+d=json.load(sys.stdin)
+for t in d['data']['activeTargets']:
+    print(t['labels']['job'], t['health'])
+"</code></pre>
+<p>Expected output — all <code>up</code>:</p>
+<pre><code>frappe_k6   up
+node        up
+prometheus  up</code></pre>
+
+<h3>Check K6</h3>
+<pre><code>k6 version</code></pre>
+
+<h3>Open the apps in a browser</h3>
+<table>
+  <tr><th>App</th><th>URL</th><th>Default Credentials</th></tr>
+  <tr><td>K6 Dashboard</td><td><code>http://&lt;server-ip&gt;:&lt;frappe-port&gt;/k6-monitor</code></td><td>Your Frappe login</td></tr>
+  <tr><td>Grafana</td><td><code>http://&lt;server-ip&gt;:3000</code></td><td><code>admin / admin</code> (change on first login)</td></tr>
+  <tr><td>Prometheus</td><td><code>http://&lt;server-ip&gt;:9090</code></td><td>No login required</td></tr>
+</table>
+
+<div class="callout callout-success">
+  <strong>✅ Good sign</strong>
+  After install, open <strong>Monitor Settings</strong> in Frappe. You should see all URLs pre-filled with your server's IP address and the correct ports.
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="monitor-settings">4. Monitor Settings — Minimal Configuration</h2>
+
+<p>Navigate to: <strong>Frappe Desk → Search "Monitor Settings"</strong> (or use the sidebar).</p>
+
+<p>Most fields are auto-filled during install. You only need to review and correct the following after install:</p>
+
+<div class="callout callout-warning">
+  <strong>⚠ Review these after install</strong>
+  The installer detects your server IP automatically. If your Frappe site is behind a reverse proxy (nginx) or uses a domain name, update <strong>Base URL</strong> and <strong>Grafana / Prometheus URLs</strong> to the public-facing addresses.
+</div>
+
+<table>
+  <tr><th>Field</th><th>Auto-filled?</th><th>Action required?</th></tr>
+  <tr><td>Site Name</td><td>✅ Yes</td><td>None — read-only</td></tr>
+  <tr><td>Base URL</td><td>✅ Yes</td><td>Update if using a domain or proxy</td></tr>
+  <tr><td>Grafana URL</td><td>✅ Yes</td><td>Update if Grafana is on a different host</td></tr>
+  <tr><td>Prometheus URL</td><td>✅ Yes</td><td>Update if Prometheus is on a different host</td></tr>
+  <tr><td>K6 Binary Path</td><td>✅ Yes</td><td>Only change if K6 is installed in a custom location</td></tr>
+  <tr><td>Reports Directory</td><td>✅ Yes</td><td>Only change if you want reports elsewhere</td></tr>
+  <tr><td>Dashboard Refresh</td><td>✅ 5 sec</td><td>Optional — increase for lower server load</td></tr>
+  <tr><td>Metrics Retention</td><td>✅ 30 days</td><td>Optional — increase if you need longer history</td></tr>
+</table>
+
+<p>After making any changes, click <strong>Save</strong>.</p>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="settings-reference">5. Settings Reference</h2>
+
+<div class="config-card">
+  <div class="field-name">site_name — Site Name</div>
+  <div class="field-meta"><span class="badge badge-blue">Read-only</span><span class="badge badge-green">Auto-filled</span></div>
+  <p>The Frappe site this app is installed on (e.g. <code>erpv16.com</code>). Set automatically — do not edit.</p>
+</div>
+
+<div class="config-card">
+  <div class="field-name">base_url — Base URL</div>
+  <div class="field-meta"><span class="badge badge-yellow">Review after install</span></div>
+  <p>The HTTP address Frappe listens on. Used by K6 scripts to make API calls during load tests.</p>
+  <table>
+    <tr><th>Field</th><th>Value</th></tr>
+    <tr><td>Default (auto)</td><td><code>http://&lt;server-ip&gt;:&lt;webserver-port&gt;</code></td></tr>
+    <tr><td>Reverse proxy</td><td><code>https://erp.example.com</code></td></tr>
+    <tr><td>Local dev</td><td><code>http://localhost:8000</code></td></tr>
+  </table>
+  <div class="callout callout-warning" style="margin-top:10px">
+    <strong>Common mistake</strong> — Using <code>localhost</code> when K6 runs on a different machine. Always use the actual server IP or domain.
+  </div>
+</div>
+
+<div class="config-card">
+  <div class="field-name">grafana_url — Grafana URL</div>
+  <div class="field-meta"><span class="badge badge-yellow">Review after install</span></div>
+  <p>Full URL to your Grafana instance. Used by the <em>External Links</em> button in Monitor Settings to open Grafana in a new tab.</p>
+  <table>
+    <tr><th>Scenario</th><th>Value</th></tr>
+    <tr><td>Default (auto)</td><td><code>http://&lt;server-ip&gt;:3000</code></td></tr>
+    <tr><td>With domain</td><td><code>https://grafana.example.com</code></td></tr>
+  </table>
+</div>
+
+<div class="config-card">
+  <div class="field-name">prometheus_url — Prometheus URL</div>
+  <div class="field-meta"><span class="badge badge-yellow">Review after install</span></div>
+  <p>Full URL to your Prometheus instance. Used by the <em>External Links</em> button in Monitor Settings to open Prometheus in a new tab.</p>
+  <table>
+    <tr><th>Scenario</th><th>Value</th></tr>
+    <tr><td>Default (auto)</td><td><code>http://&lt;server-ip&gt;:9090</code></td></tr>
+    <tr><td>With domain</td><td><code>https://prometheus.example.com</code></td></tr>
+  </table>
+</div>
+
+<div class="config-card">
+  <div class="field-name">k6_binary_path — K6 Binary Path</div>
+  <div class="field-meta"><span class="badge badge-green">Auto-filled</span></div>
+  <p>Path to the K6 executable. Auto-detected using <code>which k6</code> during install.</p>
+  <table>
+    <tr><th>Scenario</th><th>Value</th></tr>
+    <tr><td>Installed via APT</td><td><code>k6</code> (on system PATH)</td></tr>
+    <tr><td>Manual install</td><td><code>/usr/local/bin/k6</code></td></tr>
+    <tr><td>Custom location</td><td><code>/opt/k6/k6</code></td></tr>
+  </table>
+  <p>To find your K6 path: <code>which k6</code></p>
+</div>
+
+<div class="config-card">
+  <div class="field-name">k6_reports_dir — Reports Directory</div>
+  <div class="field-meta"><span class="badge badge-green">Auto-filled</span></div>
+  <p>Directory where K6 JSONL output files are written during tests. Each test run creates one file here.</p>
+  <table>
+    <tr><th>Scenario</th><th>Value</th></tr>
+    <tr><td>Default (auto)</td><td><code>/path/to/bench/apps/frappe_k6/k6_tests/reports/</code></td></tr>
+    <tr><td>Custom</td><td>Any directory writable by the bench user</td></tr>
+  </table>
+  <div class="callout callout-danger" style="margin-top:10px">
+    <strong>⚠ Permission</strong> — The bench user must have write access to this directory. Run: <code>ls -la &lt;reports_dir&gt;</code> to verify.
+  </div>
+</div>
+
+<div class="config-card">
+  <div class="field-name">refresh_interval — Dashboard Refresh (seconds)</div>
+  <div class="field-meta"><span class="badge badge-green">Default: 5</span></div>
+  <p>How often the K6 Dashboard auto-refreshes metrics (CPU, memory, active tests). Lower = more live, higher = less server load.</p>
+  <table>
+    <tr><th>Use Case</th><th>Recommended Value</th></tr>
+    <tr><td>Active load test monitoring</td><td><code>3–5</code> seconds</td></tr>
+    <tr><td>Idle / standby</td><td><code>15–30</code> seconds</td></tr>
+    <tr><td>Production (low load)</td><td><code>10</code> seconds</td></tr>
+  </table>
+</div>
+
+<div class="config-card">
+  <div class="field-name">metrics_retention_days — Metrics Retention (days)</div>
+  <div class="field-meta"><span class="badge badge-green">Default: 30</span></div>
+  <p>How many days to keep K6 report files on disk. Older files are deleted by the daily cleanup scheduler task. Does <em>not</em> affect Prometheus TSDB retention (set that in the Prometheus systemd service flags).</p>
+</div>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="dashboard">6. K6 Dashboard</h2>
+
+<p>Open: <code>http://&lt;your-site&gt;/k6-monitor</code> — or click the <strong>K6 Monitor</strong> icon on the Frappe apps screen.</p>
+
+<h3>Dashboard Sections</h3>
+<table>
+  <tr><th>Section</th><th>Shows</th></tr>
+  <tr><td><strong>Active Test Banner</strong></td><td>Appears when a test is running — test name, start time, live RPS &amp; avg response time</td></tr>
+  <tr><td><strong>System Metrics</strong></td><td>CPU %, Memory used/total, Disk %, Network sent/received (auto-refreshes)</td></tr>
+  <tr><td><strong>Infrastructure</strong></td><td>Redis status &amp; hit ratio, Database connections, Worker count, Queue depth</td></tr>
+  <tr><td><strong>Configs tab</strong></td><td>All Load Test Configs with last run status</td></tr>
+  <tr><td><strong>History tab</strong></td><td>Completed test runs with duration and status</td></tr>
+  <tr><td><strong>Builder tab</strong></td><td>Create a new Load Test Config without leaving the dashboard</td></tr>
+  <tr><td><strong>Live charts</strong></td><td>System metrics timeline &amp; live RPS/latency when a test runs</td></tr>
+</table>
+
+<h3>Dashboard Buttons</h3>
+<ul>
+  <li><strong>Run Test</strong> — starts the selected config immediately</li>
+  <li><strong>Stop Test</strong> — terminates the running k6 process</li>
+  <li><strong>Open in Grafana</strong> — opens the provisioned Grafana dashboard</li>
+  <li><strong>Refresh</strong> — manual refresh of all panels</li>
+</ul>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="grafana">7. Grafana</h2>
+
+<p>Open: <code>http://&lt;server-ip&gt;:3000</code> — Default login: <code>admin / admin</code> (you will be prompted to change it on first login).</p>
+
+<h3>Pre-provisioned Dashboard</h3>
+<p>Navigate to <strong>Dashboards → Browse → frappe_k6 — System &amp; Load Test Monitor</strong>. This dashboard includes:</p>
+<ul>
+  <li>CPU gauge and timeline (system + user + kernel split)</li>
+  <li>Memory usage timeline (used / available / cached)</li>
+  <li>Disk usage gauge</li>
+  <li>Network I/O bytes/s (per interface)</li>
+  <li>Disk I/O read/write bytes/s</li>
+  <li>TCP connections (established + TIME_WAIT)</li>
+  <li>System load averages (1m / 5m / 15m)</li>
+  <li>Open file descriptors &amp; active processes</li>
+</ul>
+
+<div class="callout callout-info">
+  <strong>ℹ Data source</strong>
+  All panels use the pre-provisioned <strong>Prometheus</strong> datasource (uid: <code>prometheus</code>), pointing to <code>http://localhost:9090</code>. If Prometheus is on a different host, go to <strong>Connections → Data sources → Prometheus</strong> and update the URL.
+</div>
+
+<h3>Opening Grafana from Frappe</h3>
+<p>Go to <strong>Monitor Settings → External Links → Open Grafana</strong>. This opens the URL configured in the <code>grafana_url</code> field.</p>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="prometheus">8. Prometheus</h2>
+
+<p>Open: <code>http://&lt;server-ip&gt;:9090</code></p>
+
+<h3>Configured Scrape Jobs</h3>
+<table>
+  <tr><th>Job</th><th>Target</th><th>What it collects</th></tr>
+  <tr><td><code>prometheus</code></td><td><code>localhost:9090</code></td><td>Prometheus self-metrics</td></tr>
+  <tr><td><code>node</code></td><td><code>localhost:9100</code></td><td>CPU, Memory, Disk, Network (host OS)</td></tr>
+  <tr><td><code>frappe_k6</code></td><td><code>localhost:9200</code></td><td>Frappe app metrics + K6 active runs</td></tr>
+</table>
+
+<h3>Useful PromQL Queries</h3>
+<pre><code># CPU usage %
+100 - (avg(rate(node_cpu_seconds_total{mode="idle"}[2m])) * 100)
+
+# Memory used %
+(1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100
+
+# Disk used %
+100 - ((node_filesystem_avail_bytes{mountpoint="/"} / node_filesystem_size_bytes{mountpoint="/"}) * 100)
+
+# Currently running K6 tests
+frappe_k6_active_runs
+
+# Redis connected
+frappe_redis_connected</code></pre>
+
+<p>Check target health at: <code>http://&lt;server-ip&gt;:9090/targets</code></p>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="load-testing">9. Load Testing</h2>
+
+<h3>Step 1 — Open Load Test Config</h3>
+<p>Go to <strong>Frappe Desk → Load Test Config → New</strong>  (or use the Builder tab on the K6 Dashboard).</p>
+
+<h3>Step 2 — Fill in the basic settings</h3>
+<table>
+  <tr><th>Field</th><th>Description</th><th>Example</th></tr>
+  <tr><td>Test Name</td><td>Unique identifier for this test</td><td><code>Login Smoke Test</code></td></tr>
+  <tr><td>Scenario Type</td><td>Load shape — see table below</td><td><code>smoke</code></td></tr>
+  <tr><td>Virtual Users (VUs)</td><td>Concurrent users during steady state</td><td><code>10</code></td></tr>
+  <tr><td>Duration</td><td>Total test duration</td><td><code>2m</code></td></tr>
+  <tr><td>Ramp Up Time</td><td>Time to reach target VUs</td><td><code>30s</code></td></tr>
+  <tr><td>Ramp Down Time</td><td>Time to wind down VUs</td><td><code>30s</code></td></tr>
+  <tr><td>Max VUs</td><td>Peak VUs for stress/spike tests</td><td><code>100</code></td></tr>
+  <tr><td>Think Time (sec)</td><td>Pause between requests per VU</td><td><code>1.0</code></td></tr>
+</table>
+
+<h3>Scenario Types</h3>
+<table>
+  <tr><th>Type</th><th>Purpose</th><th>Typical VUs</th><th>Duration</th></tr>
+  <tr><td><span class="badge badge-green">smoke</span></td><td>Quick sanity check — 1–2 VUs, short run</td><td>1–2</td><td>1–3 min</td></tr>
+  <tr><td><span class="badge badge-blue">load</span></td><td>Normal expected traffic</td><td>10–50</td><td>10–30 min</td></tr>
+  <tr><td><span class="badge badge-yellow">stress</span></td><td>Find the breaking point — ramps beyond normal</td><td>50–500</td><td>20–60 min</td></tr>
+  <tr><td><span class="badge badge-red">spike</span></td><td>Sudden burst — instant VU jump</td><td>100–1000</td><td>5–15 min</td></tr>
+  <tr><td><span class="badge badge-blue">soak</span></td><td>Endurance — steady load for a long time</td><td>10–30</td><td>30 min – 8 hr</td></tr>
+  <tr><td><span class="badge badge-blue">custom</span></td><td>Free-form; all fields editable</td><td>any</td><td>any</td></tr>
+</table>
+
+<h3>Step 3 — Add API Endpoints</h3>
+<p>In the <strong>Endpoints</strong> table, add one row per API you want to test:</p>
+
+<table>
+  <tr><th>Field</th><th>Description</th><th>Example</th></tr>
+  <tr><td>API Name</td><td>Label for this endpoint in results</td><td><code>List Items</code></td></tr>
+  <tr><td>Method</td><td>HTTP method</td><td><code>GET</code></td></tr>
+  <tr><td>Endpoint URL</td><td>Path or full URL</td><td><code>/api/resource/Item</code></td></tr>
+  <tr><td>Expected Status</td><td>HTTP status to treat as success</td><td><code>200</code></td></tr>
+  <tr><td>Auth Type</td><td>How to authenticate</td><td><code>Session (Frappe Login)</code></td></tr>
+  <tr><td>Auth Value</td><td>Credentials (see below)</td><td><em>see below</em></td></tr>
+  <tr><td>Extra Headers</td><td>JSON object of additional headers</td><td><code>{"X-Custom": "value"}</code></td></tr>
+  <tr><td>Query Params</td><td>JSON object appended as <code>?key=val</code></td><td><code>{"limit": "20"}</code></td></tr>
+  <tr><td>Request Body</td><td>JSON body for POST/PUT/PATCH</td><td><code>{"doctype": "Item"}</code></td></tr>
+  <tr><td>Weight %</td><td>Relative frequency vs other endpoints</td><td><code>70</code></td></tr>
+</table>
+
+<h3>Authentication Types</h3>
+<table>
+  <tr><th>Auth Type</th><th>Auth Value Format</th><th>When to Use</th></tr>
+  <tr><td><code>None</code></td><td>—</td><td>Public endpoints</td></tr>
+  <tr><td><code>Session (Frappe Login)</code></td><td><code>username:password</code></td><td>Standard Frappe API calls</td></tr>
+  <tr><td><code>Bearer Token</code></td><td><code>eyJhbGci...</code></td><td>JWT / OAuth APIs</td></tr>
+  <tr><td><code>Basic Auth</code></td><td><code>username:password</code></td><td>HTTP Basic authentication</td></tr>
+  <tr><td><code>API Key</code></td><td><code>api_key:api_secret</code></td><td>Frappe API key/secret pairs</td></tr>
+  <tr><td><code>Custom Header</code></td><td><code>Header-Name: value</code></td><td>Any custom auth scheme</td></tr>
+</table>
+
+<h3>Step 4 — Save and Run</h3>
+
+<div class="step"><div class="step-num">1</div><div class="step-body"><strong>Save</strong> the Load Test Config document.</div></div>
+<div class="step"><div class="step-num">2</div><div class="step-body"><strong>Click "Run Test"</strong> in the form toolbar. The test starts in the background.</div></div>
+<div class="step"><div class="step-num">3</div><div class="step-body"><strong>Open the K6 Dashboard</strong> (<code>/k6-monitor</code>) — the Active Test Banner appears at the top.</div></div>
+<div class="step"><div class="step-num">4</div><div class="step-body"><strong>Watch live metrics</strong> — RPS, avg latency, CPU, memory update every few seconds.</div></div>
+<div class="step"><div class="step-num">5</div><div class="step-body">When the test completes, the run appears in the <strong>History</strong> tab with pass/fail status.</div></div>
+
+<h3>Understanding Dashboard Metrics During a Test</h3>
+<table>
+  <tr><th>Metric</th><th>Meaning</th><th>Good Range</th></tr>
+  <tr><td>RPS (req/s)</td><td>Requests per second across all VUs</td><td>Stable, not dropping</td></tr>
+  <tr><td>Avg Latency (ms)</td><td>Mean HTTP duration per request</td><td>&lt; 500 ms for most APIs</td></tr>
+  <tr><td>CPU %</td><td>Server CPU consumed during the test</td><td>&lt; 80% (leave headroom)</td></tr>
+  <tr><td>Memory %</td><td>RAM consumed</td><td>&lt; 85%</td></tr>
+  <tr><td>Error Rate</td><td>% of requests that did not return expected status</td><td>&lt; 1%</td></tr>
+</table>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="troubleshooting">10. Troubleshooting</h2>
+
+<h3>Grafana not opening from External Links</h3>
+<div class="callout callout-warning"><strong>Symptom</strong> — Clicking "Open Grafana" does nothing or shows a blank page.</div>
+<ol>
+  <li>Check that <code>grafana_url</code> in Monitor Settings starts with <code>http://</code> or <code>https://</code>.</li>
+  <li>Verify Grafana is running: <code>systemctl is-active grafana-server</code></li>
+  <li>Test in terminal: <code>curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health</code> — should return <code>200</code>.</li>
+  <li>Check firewall: <code>sudo ufw status</code> — port 3000 must be allowed from your workstation.</li>
+</ol>
+
+<h3>Prometheus not accessible</h3>
+<ol>
+  <li><code>systemctl is-active prometheus</code> — must be <code>active</code>.</li>
+  <li><code>curl http://localhost:9090/api/v1/status/runtimeinfo</code> — should return JSON.</li>
+  <li>If inactive: <code>sudo systemctl start prometheus &amp;&amp; sudo systemctl enable prometheus</code></li>
+  <li>Logs: <code>journalctl -u prometheus -n 50 --no-pager</code></li>
+</ol>
+
+<h3>K6 not found / test won't start</h3>
+<ol>
+  <li><code>which k6</code> — if empty, K6 is not on PATH.</li>
+  <li>Re-run installer: <code>bench --site &lt;site&gt; execute frappe_k6.install._install_k6</code></li>
+  <li>Or install manually: <a href="https://k6.io/docs/get-started/installation/" target="_blank">k6.io/docs/get-started/installation</a></li>
+  <li>After installing, update the <strong>K6 Binary Path</strong> in Monitor Settings to the full path returned by <code>which k6</code>.</li>
+</ol>
+
+<h3>Metrics not appearing in K6 Dashboard</h3>
+<ol>
+  <li>Open browser DevTools (F12) → Console tab. Look for red errors.</li>
+  <li>Check that <code>frappe_k6.api.system_metrics.get_all_metrics</code> returns data:<br>
+    <code>curl http://localhost:&lt;port&gt;/api/method/frappe_k6.api.system_metrics.get_all_metrics</code></li>
+  <li>Run <code>bench restart</code> to pick up any code changes.</li>
+  <li>Verify the bench is running: <code>bench status</code></li>
+</ol>
+
+<h3>Dashboard not updating (metrics stuck)</h3>
+<ol>
+  <li>Check <strong>Dashboard Refresh</strong> in Monitor Settings — must be &gt; 0.</li>
+  <li>Hard-refresh the browser: <strong>Ctrl+Shift+R</strong> (Windows/Linux) or <strong>Cmd+Shift+R</strong> (Mac).</li>
+  <li>Check browser console for JavaScript errors.</li>
+</ol>
+
+<h3>frappe_k6 Prometheus target is "down"</h3>
+<ol>
+  <li>Check the exporter: <code>systemctl is-active frappe_k6_exporter</code></li>
+  <li>Test it: <code>curl http://localhost:9200/metrics | head -5</code> — should return Prometheus text lines.</li>
+  <li>If inactive: <code>sudo systemctl start frappe_k6_exporter</code></li>
+  <li>View logs: <code>journalctl -u frappe_k6_exporter -n 30 --no-pager</code></li>
+</ol>
+
+<h3>Load test reports: Permission denied</h3>
+<ol>
+  <li>Check the reports directory exists and is writable:<br>
+    <code>ls -la $(bench --site &lt;site&gt; execute "frappe.db.get_single_value('Monitor Settings','k6_reports_dir')")</code></li>
+  <li>Fix permissions: <code>chmod 755 /path/to/reports/</code></li>
+</ol>
+
+<h3>Grafana dashboard shows "No data"</h3>
+<ol>
+  <li>Verify the Prometheus data source: <strong>Grafana → Connections → Data sources → Prometheus → Test</strong>.</li>
+  <li>Check Prometheus has data: open <code>http://&lt;server&gt;:9090/graph</code> and query <code>node_cpu_seconds_total</code>.</li>
+  <li>Check node_exporter: <code>systemctl is-active node_exporter</code></li>
+  <li>Wait 1–2 scrape cycles (30 s) after starting services for data to appear.</li>
+</ol>
+
+
+<!-- ════════════════════════════════════════════════════════ -->
+<h2 id="best-practices">11. Best Practices</h2>
+
+<h3>Choosing the Right Scenario Type</h3>
+<ul>
+  <li>Always start with a <strong>smoke test</strong> to verify your endpoints work before running heavier tests.</li>
+  <li>Use <strong>load test</strong> as the baseline for production capacity planning.</li>
+  <li>Run <strong>stress tests</strong> in a staging environment — they will push the server to its limits.</li>
+  <li>Schedule <strong>soak tests</strong> overnight to avoid impacting daytime users.</li>
+</ul>
+
+<h3>Load Test Configuration</h3>
+<ul>
+  <li>Set <strong>Think Time</strong> to 1–2 seconds to simulate realistic user behaviour; 0 is unrealistically aggressive.</li>
+  <li>Use <strong>Weight %</strong> to mirror real traffic patterns (e.g. 70% GETs, 20% POSTs, 10% DELETEs).</li>
+  <li>Use <code>Session (Frappe Login)</code> auth for most Frappe APIs — the test runner handles cookie management automatically.</li>
+  <li>Keep the <strong>Expected Status</strong> accurate — a mismatch silently marks requests as failed.</li>
+</ul>
+
+<h3>Dashboard Performance</h3>
+<ul>
+  <li>Set <strong>Dashboard Refresh</strong> to <code>5</code> seconds only while actively watching a test; set it to <code>15–30</code> otherwise.</li>
+  <li>Do not keep the K6 Dashboard open in multiple browser tabs simultaneously during a load test.</li>
+</ul>
+
+<h3>Prometheus &amp; Grafana</h3>
+<ul>
+  <li>Change the Grafana <code>admin</code> password immediately after first login.</li>
+  <li>To extend Prometheus TSDB retention beyond the default 15 days, add <code>--storage.tsdb.retention.time=90d</code> to the ExecStart line in <code>/etc/systemd/system/prometheus.service</code>, then <code>sudo systemctl daemon-reload &amp;&amp; sudo systemctl restart prometheus</code>.</li>
+  <li>Back up <code>~/monitoring/prometheus/data/</code> regularly if you need historical metrics.</li>
+</ul>
+
+<h3>Production Checklist</h3>
+<ul>
+  <li>☐ Grafana admin password changed</li>
+  <li>☐ All Monitor Settings URLs use the server's actual IP or domain (not <code>localhost</code>)</li>
+  <li>☐ Firewall: ports 3000 and 9090 restricted to trusted IPs only</li>
+  <li>☐ Reports directory on a disk with adequate free space</li>
+  <li>☐ All four services set to auto-start: <code>systemctl is-enabled prometheus grafana-server node_exporter frappe_k6_exporter</code></li>
+  <li>☐ Ran a smoke test successfully before any heavier scenarios</li>
+</ul>
+
+<br><hr style="margin:40px 0 24px;border:none;border-top:1px solid var(--border)">
+<p style="color:var(--gray);font-size:13px;text-align:center">
+  frappe_k6 User Manual &nbsp;·&nbsp; Questions? Open the <strong>Monitor Settings</strong> page and click <em>External Links → Open Grafana</em> to verify your setup is running.
+</p>
+
+</main>
+</div>
+
+<script>
+// Highlight active sidebar link based on scroll
+const sections = document.querySelectorAll("h2[id]");
+const links = document.querySelectorAll("nav.sidebar a[href^='#']");
+const obs = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      links.forEach(l => l.classList.remove("active"));
+      const active = document.querySelector(`nav.sidebar a[href="#${e.target.id}"]`);
+      if (active) active.classList.add("active");
+    }
+  });
+}, { rootMargin: "-20% 0px -70% 0px" });
+sections.forEach(s => obs.observe(s));
+</script>
+</body>
+</html>

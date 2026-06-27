@@ -1,0 +1,64 @@
+{
+ "actions": [],
+ "autoname": "format:RUN-{config}-{###}",
+ "creation": "2024-06-26 00:00:00.000000",
+ "doctype": "DocType",
+ "editable_grid": 1,
+ "engine": "InnoDB",
+ "field_order": [
+  "config", "status", "column_break_a",
+  "started_at", "completed_at",
+  "section_metrics",
+  "total_requests", "failed_requests", "requests_per_sec",
+  "column_break_b",
+  "avg_duration_ms", "p95_duration_ms", "p99_duration_ms",
+  "section_meta",
+  "pid", "output_file", "scenario_type",
+  "section_summary",
+  "summary_json"
+ ],
+ "fields": [
+  {"fieldname": "config", "fieldtype": "Link", "label": "Test Config", "options": "Load Test Config", "reqd": 1, "in_list_view": 1, "bold": 1},
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "label": "Status",
+   "options": "Running\nCompleted\nFailed\nStopped",
+   "default": "Running",
+   "in_list_view": 1
+  },
+  {"fieldname": "column_break_a", "fieldtype": "Column Break"},
+  {"fieldname": "started_at", "fieldtype": "Datetime", "label": "Started At", "in_list_view": 1},
+  {"fieldname": "completed_at", "fieldtype": "Datetime", "label": "Completed At"},
+  {"fieldname": "section_metrics", "fieldtype": "Section Break", "label": "Performance Metrics"},
+  {"fieldname": "total_requests", "fieldtype": "Int", "label": "Total Requests", "read_only": 1},
+  {"fieldname": "failed_requests", "fieldtype": "Int", "label": "Failed Requests", "read_only": 1},
+  {"fieldname": "requests_per_sec", "fieldtype": "Float", "label": "Requests / sec", "read_only": 1},
+  {"fieldname": "column_break_b", "fieldtype": "Column Break"},
+  {"fieldname": "avg_duration_ms", "fieldtype": "Float", "label": "Avg Duration (ms)", "read_only": 1},
+  {"fieldname": "p95_duration_ms", "fieldtype": "Float", "label": "P95 Duration (ms)", "read_only": 1},
+  {"fieldname": "p99_duration_ms", "fieldtype": "Float", "label": "P99 Duration (ms)", "read_only": 1},
+  {"fieldname": "section_meta", "fieldtype": "Section Break", "label": "Run Details", "collapsible": 1},
+  {"fieldname": "pid", "fieldtype": "Int", "label": "Process ID"},
+  {"fieldname": "output_file", "fieldtype": "Data", "label": "Output File Path"},
+  {"fieldname": "scenario_type", "fieldtype": "Data", "label": "Scenario Type"},
+  {"fieldname": "section_summary", "fieldtype": "Section Break", "label": "Raw Summary", "collapsible": 1},
+  {"fieldname": "summary_json", "fieldtype": "Code", "label": "Summary JSON", "options": "JSON", "read_only": 1}
+ ],
+ "links": [],
+ "modified": "2024-06-26 00:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "Load Test Run",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1, "delete": 1, "email": 1, "export": 1,
+   "print": 1, "read": 1, "report": 1, "role": "System Manager",
+   "share": 1, "write": 1
+  }
+ ],
+ "sort_field": "started_at",
+ "sort_order": "DESC",
+ "track_changes": 0
+}
