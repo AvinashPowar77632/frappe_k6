@@ -229,6 +229,11 @@ def save_config(config_name, test_scenario="load", virtual_users=10, duration="5
             "endpoint_url":    ep.get("endpoint_url") or ep.get("api_path", ""),
             "expected_status": int(ep.get("expected_status", 200)),
             "weight":          int(ep.get("weight", 1)),
+            "auth_type":       ep.get("auth_type", "None"),
+            "auth_value":      ep.get("auth_value", ""),
+            "headers":         ep.get("headers", ""),
+            "query_params":    ep.get("query_params", ""),
+            "payload":         ep.get("payload", ""),
         })
 
     if exists:
@@ -248,6 +253,38 @@ def get_configs():
                 "duration", "status", "last_run", "last_run_status"],
         order_by="modified desc"
     )
+
+
+@frappe.whitelist()
+def get_config(config_name: str):
+    """Return full config doc including all endpoint fields."""
+    doc = frappe.get_doc("Load Test Config", config_name)
+    eps = []
+    for ep in doc.endpoints:
+        eps.append({
+            "api_name":        ep.api_name,
+            "http_method":     ep.http_method,
+            "endpoint_url":    ep.endpoint_url,
+            "expected_status": ep.expected_status,
+            "weight":          ep.weight,
+            "auth_type":       ep.auth_type or "None",
+            "auth_value":      ep.auth_value or "",
+            "headers":         ep.headers or "",
+            "query_params":    ep.query_params or "",
+            "payload":         ep.payload or "",
+        })
+    return {
+        "name":          doc.name,
+        "test_name":     doc.test_name,
+        "scenario_type": doc.scenario_type,
+        "virtual_users": doc.virtual_users,
+        "duration":      doc.duration,
+        "ramp_up_time":  doc.ramp_up_time,
+        "ramp_down_time":doc.ramp_down_time,
+        "max_vus":       doc.max_vus,
+        "think_time":    doc.think_time,
+        "endpoints":     eps,
+    }
 
 
 # ── Internal helpers ────────────────────────────────────────────

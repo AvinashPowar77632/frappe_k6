@@ -82,6 +82,13 @@ def send_request(config_json):
         )
         url = url + ("&" if "?" in url else "?") + qs
 
+    # ── Resolve relative URLs ─────────────────────────────────────────────────
+    if not url:
+        return {"ok": False, "error": "URL is empty"}
+    if not url.startswith(("http://", "https://")):
+        base = frappe.utils.get_url().rstrip("/")
+        url  = base + "/" + url.lstrip("/")
+
     # ── Build headers ────────────────────────────────────────────────────────
     headers = {}
     for h in (cfg.get("headers") or []):
@@ -147,8 +154,24 @@ def send_request(config_json):
             body_bytes = ("\r\n".join(parts) + f"\r\n--{boundary}--\r\n").encode("utf-8")
             headers["Content-Type"] = f"multipart/form-data; boundary={boundary}"
 
-    # ── Send ─────────────────────────────────────────────────────────────────
+    # ── Auto-inject session for same-origin requests ─────────────────────────
     method = (cfg.get("method") or "GET").upper()
+    if auth_type in ("None", "Session (Frappe Login)"):
+        try:
+            site_host = urllib.parse.urlparse(frappe.utils.get_url()).netloc
+            req_host  = urllib.parse.urlparse(url).netloc
+            if req_host == site_host:
+                sid = frappe.session.sid
+                if sid and sid != "Guest":
+                    headers.setdefault("Cookie", f"sid={sid}")
+                    if method != "GET":
+                        csrf = (frappe.session.data or {}).get("csrf_token", "")
+                        if csrf:
+                            headers.setdefault("X-Frappe-CSRF-Token", csrf)
+        except Exception:
+            pass
+
+    # ── Send ─────────────────────────────────────────────────────────────────
     req = urllib.request.Request(url, data=body_bytes, headers=headers, method=method)
 
     start_ts = time.time()

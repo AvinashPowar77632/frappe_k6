@@ -144,14 +144,74 @@ body { background:#0d0d0d !important; color:#e2e8f0 !important; font-family:'Int
 .k6-input:focus { outline:none; border-color:#f97316; }
 .k6-select { width:100%; background:#0a0a0a; border:1px solid #374151; color:#f1f5f9; padding:8px 10px; border-radius:6px; font-size:13px; }
 
-/* ── Endpoint Row ──────────────────────────────────────────── */
-.k6-ep-row {
-  background:#0a0a0a; border:1px solid #1f2937; border-radius:8px;
-  padding:12px; margin-bottom:8px;
-  display:grid; grid-template-columns:80px 1fr 100px 80px auto;
-  gap:8px; align-items:center;
-}
-@media(max-width:900px){ .k6-ep-row{grid-template-columns:1fr 1fr; grid-template-rows:auto auto auto;} }
+/* ── Endpoint Card ─────────────────────────────────────────── */
+.k6-ep-card { background:#0d1117; border:1px solid #1f2937; border-radius:10px; margin-bottom:14px; overflow:hidden; transition:border-color .2s; }
+.k6-ep-card:hover { border-color:#374151; }
+.k6-ep-hd { display:flex; align-items:center; gap:8px; padding:12px 14px; background:#0a0f1a; flex-wrap:wrap; }
+.k6-ep-num { font-size:10px; font-weight:700; color:#475569; background:#1e293b; border-radius:3px; padding:2px 6px; white-space:nowrap; }
+.k6-ep-method { background:#1e293b; border:1px solid #334155; color:#f97316; border-radius:5px; padding:5px 8px; font-size:12px; font-weight:700; cursor:pointer; min-width:80px; }
+.k6-ep-url { flex:1; min-width:180px; background:#111827; border:1px solid #374151; color:#f1f5f9; border-radius:5px; padding:6px 10px; font-size:13px; font-family:monospace; }
+.k6-ep-url:focus { outline:none; border-color:#f97316; }
+.k6-ep-url::placeholder { color:#4b5563; font-family:sans-serif; }
+.k6-ep-sendbtn { background:#0e4429; border:1px solid #22c55e; color:#22c55e; border-radius:5px; padding:6px 14px; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap; transition:all .15s; }
+.k6-ep-sendbtn:hover { background:#14532d; color:#fff; }
+.k6-ep-sendbtn:disabled { opacity:.4; cursor:not-allowed; }
+.k6-ep-delbtn { background:none; border:1px solid #374151; color:#6b7280; border-radius:5px; padding:5px 9px; font-size:13px; cursor:pointer; transition:all .15s; }
+.k6-ep-delbtn:hover { border-color:#ef4444; color:#ef4444; }
+.k6-ep-meta { display:flex; align-items:center; gap:10px; padding:7px 14px; background:#080d16; border-top:1px solid #1a2332; flex-wrap:wrap; }
+.k6-ep-mlbl { font-size:10px; color:#6b7280; font-weight:600; text-transform:uppercase; white-space:nowrap; }
+.k6-ep-minput { background:#111827; border:1px solid #1e293b; color:#f1f5f9; border-radius:4px; padding:3px 7px; font-size:12px; }
+.k6-ep-minput:focus { outline:none; border-color:#f97316; }
+/* Tabs */
+.k6-ep-tabs { display:flex; border-bottom:1px solid #1a2332; background:#080d16; padding:0 14px; gap:2px; }
+.k6-ep-tab { background:none; border:none; border-bottom:2px solid transparent; color:#6b7280; padding:8px 14px; font-size:12px; font-weight:500; cursor:pointer; transition:all .15s; white-space:nowrap; }
+.k6-ep-tab:hover { color:#e2e8f0; background:#111827; }
+.k6-ep-tab.on { color:#f97316; border-bottom-color:#f97316; font-weight:600; }
+.k6-ep-tc { display:none; padding:14px; }
+.k6-ep-tc.on { display:block; }
+/* KV tables */
+.k6-ep-kv { width:100%; border-collapse:collapse; margin-bottom:8px; }
+.k6-ep-kv th { font-size:10px; color:#475569; text-transform:uppercase; letter-spacing:.5px; padding:5px 8px; text-align:left; background:#080d16; border-bottom:1px solid #1a2332; }
+.k6-ep-kv td { padding:3px 4px; border-bottom:1px solid #0d1117; }
+.k6-ep-kv tr:last-child td { border-bottom:none; }
+.k6-kvi { width:100%; background:#111827; border:1px solid #1e293b; color:#f1f5f9; border-radius:4px; padding:5px 8px; font-size:12px; }
+.k6-kvi:focus { outline:none; border-color:#3b82f6; }
+.k6-kvi.mono { font-family:monospace; }
+.k6-kvi-chk { accent-color:#f97316; width:14px; height:14px; cursor:pointer; }
+.k6-kvi-del { background:none; border:none; color:#6b7280; cursor:pointer; font-size:14px; padding:0 5px; line-height:1; }
+.k6-kvi-del:hover { color:#ef4444; }
+.k6-ep-addrow { width:100%; background:none; border:1px dashed #1e293b; color:#475569; border-radius:5px; padding:6px; font-size:11px; cursor:pointer; margin-top:6px; transition:all .15s; }
+.k6-ep-addrow:hover { border-color:#64748b; color:#e2e8f0; background:#111827; }
+/* Body types */
+.k6-ep-bts { display:flex; gap:4px; margin-bottom:10px; flex-wrap:wrap; }
+.k6-ep-bt { background:#111827; border:1px solid #1e293b; color:#6b7280; border-radius:4px; padding:4px 10px; font-size:11px; font-weight:500; cursor:pointer; transition:all .15s; }
+.k6-ep-bt:hover { border-color:#64748b; color:#e2e8f0; }
+.k6-ep-bt.on { background:#1e3a5f; border-color:#3b82f6; color:#60a5fa; }
+.k6-ep-ta { width:100%; background:#111827; border:1px solid #1e293b; color:#f1f5f9; border-radius:6px; padding:10px; font-family:monospace; font-size:12px; line-height:1.6; resize:vertical; min-height:120px; }
+.k6-ep-ta:focus { outline:none; border-color:#3b82f6; }
+/* Auth panel */
+.k6-ep-auth-wrap { display:grid; grid-template-columns:200px 1fr; gap:14px; align-items:start; }
+@media(max-width:700px){ .k6-ep-auth-wrap{grid-template-columns:1fr;} }
+.k6-ep-af { display:flex; flex-direction:column; gap:4px; }
+.k6-ep-af label { font-size:10px; font-weight:600; color:#6b7280; text-transform:uppercase; letter-spacing:.4px; }
+.k6-ep-af input { background:#111827; border:1px solid #1e293b; color:#f1f5f9; border-radius:5px; padding:6px 9px; font-size:12px; }
+.k6-ep-af input:focus { outline:none; border-color:#3b82f6; }
+.k6-ep-af select { background:#111827; border:1px solid #1e293b; color:#f1f5f9; border-radius:5px; padding:6px 9px; font-size:12px; }
+.k6-ep-auth-hint { font-size:11px; color:#475569; font-style:italic; padding:10px 0; }
+/* Response panel */
+.k6-ep-resp { display:none; border-top:1px solid #1a2332; padding:14px; background:#050810; }
+.k6-ep-resp.show { display:block; }
+.k6-ep-resp-bar { display:flex; align-items:center; gap:10px; margin-bottom:10px; flex-wrap:wrap; }
+.k6-ep-stat { font-size:12px; font-weight:700; padding:3px 9px; border-radius:5px; }
+.ep-s2 { background:rgba(34,197,94,.15); color:#22c55e; border:1px solid rgba(34,197,94,.3); }
+.ep-s3 { background:rgba(59,130,246,.15); color:#60a5fa; border:1px solid rgba(59,130,246,.3); }
+.ep-s4 { background:rgba(249,115,22,.15); color:#fb923c; border:1px solid rgba(249,115,22,.3); }
+.ep-s5, .ep-se { background:rgba(239,68,68,.15); color:#f87171; border:1px solid rgba(239,68,68,.3); }
+.k6-ep-resp-tabs { display:flex; gap:1px; margin-bottom:10px; }
+.k6-ep-resp-tab { background:#111827; border:1px solid #1e293b; color:#6b7280; border-radius:4px; padding:3px 9px; font-size:11px; cursor:pointer; }
+.k6-ep-resp-tab.on { background:#1e293b; color:#e2e8f0; border-color:#374151; }
+.k6-ep-resp-body { font-family:monospace; font-size:11px; line-height:1.7; white-space:pre-wrap; word-break:break-word; max-height:240px; overflow-y:auto; background:#0d1117; border:1px solid #1a2332; border-radius:6px; padding:10px; color:#d1d5db; margin:0; }
+.k6-ep-resp-hdrs-tbl { font-size:11px; color:#9ca3af; background:#0d1117; border:1px solid #1a2332; border-radius:6px; padding:8px 10px; max-height:150px; overflow-y:auto; }
 
 /* ── Buttons ───────────────────────────────────────────────── */
 .k6-btn {
@@ -175,6 +235,7 @@ body { background:#0d0d0d !important; color:#e2e8f0 !important; font-family:'Int
 .k6-alert.success { background:#14532d; color:#86efac; border:1px solid #16a34a; }
 .k6-alert.danger  { background:#7f1d1d; color:#fca5a5; border:1px solid #dc2626; }
 .k6-alert.info    { background:#1e3a5f; color:#93c5fd; border:1px solid #2563eb; }
+@keyframes spin { to { transform:rotate(360deg); } }
 </style>
 {% endblock %}
 
@@ -348,7 +409,7 @@ function _k6Init() {
     var m = document.querySelector('meta[name="csrf-token"]');
     return m ? m.getAttribute('content') : '';
   }
-  function api(method, args, cb) {
+  function api(method, args, cb, errCb) {
     fetch('/api/method/' + method, {
       method: 'POST',
       credentials: 'same-origin',
@@ -362,9 +423,9 @@ function _k6Init() {
     .then(function(res) { return res.json(); })
     .then(function(r) {
       if (r && r.message !== undefined) cb && cb(r.message);
-      else if (r && r.exc) console.error('[k6 api]', method, r.exc);
+      else if (r && r.exc) { console.error('[k6 api]', method, r.exc); errCb && errCb(r.exc); }
     })
-    .catch(function(e) { console.error('[k6 fetch error]', method, e); });
+    .catch(function(e) { console.error('[k6 fetch error]', method, e); errCb && errCb(String(e)); });
   }
 
   /* ── System Metrics ───────────────────────────────────────── */
@@ -502,7 +563,7 @@ function _k6Init() {
         var st = (c.status || "ready").toLowerCase();
         var badge = '<span class="k6-badge-status ' + st + '">' + (c.status || "Ready") + '</span>';
         var label = c.test_name || c.name;
-        return '<tr><td><strong>' + label + '</strong></td><td>' + (c.scenario_type || "-") + '</td><td>' + (c.virtual_users || "-") + '</td><td>' + (c.duration || "-") + '</td><td>' + badge + '</td><td>' + (c.last_run || "-") + '</td><td><button class="k6-btn primary sm" onclick="runTest(\'' + c.name + '\')">▶ Run</button></td></tr>';
+        return '<tr><td><strong>' + label + '</strong></td><td>' + (c.scenario_type || "-") + '</td><td>' + (c.virtual_users || "-") + '</td><td>' + (c.duration || "-") + '</td><td>' + badge + '</td><td>' + (c.last_run || "-") + '</td><td style="display:flex;gap:5px"><button class="k6-btn primary sm" onclick="runTest(\'' + c.name + '\')">▶ Run</button><button class="k6-btn default sm" onclick="loadConfigIntoBuilder(\'' + c.name + '\')">✏ Edit</button></td></tr>';
       }).join("");
     });
   }
@@ -560,35 +621,397 @@ function _k6Init() {
     showMsg("", "");
   });
 
+  /* ══════════════════════════════════════════════════════════════
+     ENDPOINT CARD HELPERS
+     All exposed on window.* so inline onclick= attributes work
+  ══════════════════════════════════════════════════════════════ */
+  function _esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
+  function _gv(id){var e=document.getElementById(id);return e?e.value:'';}
+
+  /* Add a KV row to a table body */
+  window._epKv = function(tid, k, v, en) {
+    var tb = document.getElementById(tid);
+    if (!tb) return;
+    var tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td style="width:22px;text-align:center"><input type="checkbox" class="k6-kvi-chk"'+(en===false?'':' checked')+'></td>'+
+      '<td><input class="k6-kvi mono" placeholder="key" value="'+_esc(k||'')+'"></td>'+
+      '<td><input class="k6-kvi" placeholder="value" value="'+_esc(v||'')+'"></td>'+
+      '<td style="width:24px"><button class="k6-kvi-del" onclick="this.closest(\'tr\').remove()">×</button></td>';
+    tb.appendChild(tr);
+  };
+
+  /* Switch tabs inside a card — called by tab button onclick */
+  window._epTab = function(n, tab) {
+    var card = document.getElementById('ep-row-'+n);
+    if (!card) return;
+    card.querySelectorAll('.k6-ep-tab').forEach(function(b){ b.classList.toggle('on', b.dataset.t===tab); });
+    card.querySelectorAll('.k6-ep-tc').forEach(function(c){ c.classList.toggle('on', c.dataset.t===tab); });
+  };
+
+  /* Switch body type */
+  window._epBt = function(n, bt) {
+    var card = document.getElementById('ep-row-'+n);
+    if (!card) return;
+    card.querySelectorAll('.k6-ep-bt').forEach(function(b){ b.classList.toggle('on', b.dataset.bt===bt); });
+    var ta  = document.getElementById('ep-body-'+n);
+    var fda = document.getElementById('ep-fd-wrap-'+n);
+    if (bt==='none')   { ta.style.display='none'; if(fda)fda.style.display='none'; }
+    else if (bt==='form-data'||bt==='urlencoded') { ta.style.display='none'; if(fda)fda.style.display=''; }
+    else               { ta.style.display=''; if(fda)fda.style.display='none'; if(bt==='json'&&!ta.value) ta.value='{\n  \n}'; }
+  };
+
+  /* Render auth credential fields */
+  window._epAuth = function(n) {
+    var type = _gv('ep-at-'+n);
+    var el   = document.getElementById('ep-af-'+n);
+    if (!el) return;
+    var h = '';
+    if (type==='Bearer Token') {
+      h = '<div class="k6-ep-af"><label>Token</label><input id="ep-atk-'+n+'" type="text" placeholder="eyJ..."></div>'+
+          '<p class="k6-ep-auth-hint">Sent as: Authorization: Bearer &lt;token&gt;</p>';
+    } else if (type==='Basic Auth'||type==='Session (Frappe Login)') {
+      h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+            '<div class="k6-ep-af"><label>Username</label><input id="ep-au-'+n+'" type="text" placeholder="admin"></div>'+
+            '<div class="k6-ep-af"><label>Password</label><input id="ep-ap-'+n+'" type="password" placeholder="••••••"></div>'+
+          '</div>';
+    } else if (type==='API Key') {
+      h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+            '<div class="k6-ep-af"><label>Header Name</label><input id="ep-akh-'+n+'" type="text" value="X-API-Key"></div>'+
+            '<div class="k6-ep-af"><label>Key Value</label><input id="ep-akv-'+n+'" type="text" placeholder="api_key:api_secret"></div>'+
+          '</div>'+
+          '<p class="k6-ep-auth-hint">For Frappe: key_value is "api_key:api_secret" → sent as Authorization: token …</p>';
+    } else if (type==='Custom Header') {
+      h = '<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">'+
+            '<div class="k6-ep-af"><label>Header Name</label><input id="ep-ach-'+n+'" type="text" value="Authorization"></div>'+
+            '<div class="k6-ep-af"><label>Value</label><input id="ep-acv-'+n+'" type="text" placeholder="custom value"></div>'+
+          '</div>';
+    } else {
+      h = '<p class="k6-ep-auth-hint">No authentication will be sent with this request.</p>';
+    }
+    el.innerHTML = h;
+  };
+
+  /* Pretty-print JSON body */
+  window._epPretty = function(n) {
+    var ta = document.getElementById('ep-body-'+n);
+    if (!ta) return;
+    try { ta.value = JSON.stringify(JSON.parse(ta.value), null, 2); }
+    catch(e) { toast('Invalid JSON', 'danger'); }
+  };
+
+  /* Validate JSON body */
+  window._epValidate = function(n) {
+    try { JSON.parse(document.getElementById('ep-body-'+n).value); toast('Valid JSON ✓','success'); }
+    catch(e) { toast('JSON error: '+e.message,'danger'); }
+  };
+
+  /* Read KV table into array */
+  function _kvList(tid) {
+    var list = [];
+    var tb = document.getElementById(tid);
+    if (!tb) return list;
+    tb.querySelectorAll('tr').forEach(function(r) {
+      var ins = r.querySelectorAll('input.k6-kvi');
+      var cb  = r.querySelector('input[type=checkbox]');
+      if (ins[0] && ins[0].value.trim()) list.push({key:ins[0].value.trim(), value:ins[1]?ins[1].value:'', enabled:cb?cb.checked:true});
+    });
+    return list;
+  }
+
+  /* Read current auth config from a card */
+  function _getAuthCfg(n) {
+    var type = _gv('ep-at-'+n);
+    if (type==='Bearer Token')                        return {token:_gv('ep-atk-'+n)};
+    if (type==='Basic Auth'||type==='Session (Frappe Login)') return {username:_gv('ep-au-'+n), password:_gv('ep-ap-'+n)};
+    if (type==='API Key')                             return {header:_gv('ep-akh-'+n), value:_gv('ep-akv-'+n)};
+    if (type==='Custom Header')                       return {header:_gv('ep-ach-'+n), value:_gv('ep-acv-'+n)};
+    return {};
+  }
+
+  /* Read body content from a card */
+  function _getBody(n) {
+    var bt = document.querySelector('#ep-row-'+n+' .k6-ep-bt.on');
+    var btType = bt ? bt.dataset.bt : 'none';
+    if (btType==='none') return {body_type:'none', payload:''};
+    if (btType==='form-data'||btType==='urlencoded') {
+      var obj = {};
+      _kvList('ep-fd-'+n).forEach(function(kv){ obj[kv.key]=kv.value; });
+      return {body_type:btType, payload:JSON.stringify(obj)};
+    }
+    return {body_type:btType, payload:_gv('ep-body-'+n)};
+  }
+
+  /* ── Send test request ───────────────────────────────────── */
+  window._epSend = function(n) {
+    var url = _gv('ep-url-'+n).trim();
+    if (!url) { toast('Enter a URL first','danger'); return; }
+    var btn = document.getElementById('ep-sb-'+n);
+    if (btn) { btn.disabled=true; btn.innerHTML='<span style="animation:spin 1s linear infinite;display:inline-block">⟳</span> Sending…'; }
+    var authType = _gv('ep-at-'+n);
+    var authCfg  = _getAuthCfg(n);
+    var bd       = _getBody(n);
+    var params   = _kvList('ep-qp-'+n);
+    var pathP    = {};
+    _kvList('ep-pp-'+n).forEach(function(kv){ pathP[kv.key]=kv.value; });
+    var cfg = {
+      method: _gv('ep-m-'+n)||'GET', url:url,
+      auth_type:authType, auth_config:authCfg,
+      headers:_kvList('ep-hd-'+n), params:params, path_params:pathP,
+      body_type:bd.body_type, body_content:bd.payload,
+      expected_status:parseInt(_gv('ep-es-'+n))||200,
+      response_time_threshold_ms:5000
+    };
+    api('frappe_k6.api.api_tester.send_request', {config_json:JSON.stringify(cfg)}, function(r) {
+      if (btn) { btn.disabled=false; btn.innerHTML='▶ Send Test'; }
+      var rp = document.getElementById('ep-resp-'+n);
+      if (rp) rp.classList.add('show');
+      if (!r||!r.ok) {
+        var sc0 = document.getElementById('ep-rsc-'+n);
+        if (sc0) { sc0.textContent='ERR'; sc0.className='k6-ep-stat ep-se'; }
+        var rb0 = document.getElementById('ep-rb-'+n);
+        if (rb0) rb0.textContent = r?(r.error||'Failed'):'No response';
+        return;
+      }
+      var sc = r.status;
+      var cls = sc>=200&&sc<300?'ep-s2':sc>=300&&sc<400?'ep-s3':sc>=400&&sc<500?'ep-s4':'ep-s5';
+      var scEl = document.getElementById('ep-rsc-'+n);
+      if (scEl) { scEl.textContent=sc+' '+(r.status_text||''); scEl.className='k6-ep-stat '+cls; }
+      var tmEl = document.getElementById('ep-rtm-'+n);
+      if (tmEl) tmEl.textContent=(r.elapsed_ms||0)+'ms';
+      var szEl = document.getElementById('ep-rsz-'+n);
+      if (szEl) szEl.textContent = r.size_bytes<1024?r.size_bytes+'B':(r.size_bytes/1024).toFixed(1)+'KB';
+      /* response body tab */
+      var body = r.body||'';
+      try { body = JSON.stringify(JSON.parse(body), null, 2); } catch(e){}
+      var rbEl = document.getElementById('ep-rb-'+n);
+      if (rbEl) rbEl.textContent = body||'(empty)';
+      /* response headers tab */
+      var hdrs = Object.entries(r.headers||{});
+      var rhEl = document.getElementById('ep-rh-'+n);
+      if (rhEl) rhEl.innerHTML = hdrs.map(function(kv){ return '<div style="padding:2px 0;border-bottom:1px solid #1a2332"><span style="color:#64748b">'+_esc(kv[0])+'</span>: '+_esc(kv[1])+'</div>'; }).join('');
+      /* switch to body tab */
+      window._epRespTab(n, 'body');
+    }, function(e) {
+      if (btn) { btn.disabled=false; btn.innerHTML='▶ Send Test'; }
+      toast('Request error: '+e,'danger');
+    });
+  };
+
+  /* Copy to clipboard — works on HTTP too */
+  window._epCopy = function(id) {
+    var txt = (document.getElementById(id)||{}).textContent||'';
+    if (navigator.clipboard && window.isSecureContext) {
+      navigator.clipboard.writeText(txt).then(function(){ toast('Copied','success'); });
+    } else {
+      var ta = document.createElement('textarea');
+      ta.value = txt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      try { document.execCommand('copy'); toast('Copied','success'); } catch(e){ toast('Copy failed','danger'); }
+      document.body.removeChild(ta);
+    }
+  };
+
+  window._epRespTab = function(n, t) {
+    ['body','headers'].forEach(function(tt) {
+      var tab = document.getElementById('ep-rt-btn-'+n+'-'+tt);
+      var pnl = document.getElementById('ep-rt-pnl-'+n+'-'+tt);
+      if (tab) tab.classList.toggle('on', tt===t);
+      if (pnl) pnl.style.display = tt===t?'':'none';
+    });
+  };
+
+  /* ── Build endpoint card HTML ──────────────────────────────── */
   function addEpRow(ep) {
     ep = ep || {};
     epCount++;
     var n = epCount;
-    var div = document.createElement("div");
-    div.className = "k6-ep-row";
-    div.id = "ep-row-" + n;
-    div.innerHTML = [
-      '<select class="k6-select" id="ep-method-' + n + '"><option>GET</option><option>POST</option><option>PUT</option><option>PATCH</option><option>DELETE</option></select>',
-      '<input class="k6-input" id="ep-url-' + n + '" placeholder="/api/method/frappe.ping" value="' + (ep.endpoint_url || ep.api_path || "") + '">',
-      '<input class="k6-input" id="ep-name-' + n + '" placeholder="Label" value="' + (ep.api_name || ep.endpoint_label || "") + '">',
-      '<input class="k6-input" type="number" id="ep-weight-' + n + '" value="' + (ep.weight || 1) + '" min="1" placeholder="Weight">',
-      '<button class="k6-btn icon" onclick="document.getElementById(\'ep-row-' + n + '\').remove()">✕</button>',
-    ].join("");
-    if (ep.http_method) div.querySelector("select").value = ep.http_method;
-    document.getElementById("ep-list").appendChild(div);
+
+    /* normalise stored data */
+    var sParams=[], sHeaders=[], sPathP={}, sAuthCfg={};
+    try { var rawQ=JSON.parse(ep.query_params||'[]');  sParams  = Array.isArray(rawQ)?rawQ:Object.entries(rawQ).map(function(kv){return{key:kv[0],value:kv[1],enabled:true};}); } catch(e){}
+    try { var rawH=JSON.parse(ep.headers||'[]');       sHeaders = Array.isArray(rawH)?rawH:Object.entries(rawH).map(function(kv){return{key:kv[0],value:kv[1],enabled:true};}); } catch(e){}
+    try { sAuthCfg = JSON.parse(ep.auth_config||'{}'); } catch(e){}
+    try { sPathP   = JSON.parse(ep.path_params||'{}'); } catch(e){}
+    var sBt    = ep.body_type||'none';
+    var sBody  = ep.payload||'';
+    var sAuth  = ep.auth_type||'None';
+    var sExp   = ep.expected_status||200;
+    var sM     = ep.http_method||'GET';
+    var methodColors = {GET:'#22c55e',POST:'#f97316',PUT:'#3b82f6',PATCH:'#a855f7',DELETE:'#ef4444'};
+
+    var card = document.createElement('div');
+    card.className = 'k6-ep-card';
+    card.id = 'ep-row-'+n;
+
+    /* ── Top bar ── */
+    var methodOpts = ['GET','POST','PUT','PATCH','DELETE'].map(function(m){
+      return '<option value="'+m+'"'+(m===sM?' selected':'')+'>'+m+'</option>';
+    }).join('');
+
+    card.innerHTML =
+      '<div class="k6-ep-hd">'+
+        '<span class="k6-ep-num">EP #'+n+'</span>'+
+        '<select class="k6-ep-method" id="ep-m-'+n+'">'+methodOpts+'</select>'+
+        '<input class="k6-ep-url" id="ep-url-'+n+'" placeholder="https://your-site.com/api/resource/Item" value="'+_esc(ep.endpoint_url||ep.api_path||'')+'">'+
+        '<button class="k6-ep-sendbtn" id="ep-sb-'+n+'" onclick="window._epSend('+n+')">▶ Send Test</button>'+
+        '<button class="k6-ep-delbtn" onclick="document.getElementById(\'ep-row-'+n+'\').remove()" title="Remove endpoint">✕</button>'+
+      '</div>'+
+
+      /* ── Meta row ── */
+      '<div class="k6-ep-meta">'+
+        '<span class="k6-ep-mlbl">Label</span>'+
+        '<input class="k6-ep-minput" id="ep-name-'+n+'" style="width:160px" placeholder="e.g. Get Item List" value="'+_esc(ep.api_name||ep.endpoint_label||'')+'">'+
+        '<span class="k6-ep-mlbl" style="margin-left:10px">Weight</span>'+
+        '<input class="k6-ep-minput" id="ep-weight-'+n+'" type="number" style="width:55px" value="'+(ep.weight||1)+'" min="1" title="Relative call frequency in load test">'+
+        '<span class="k6-ep-mlbl" style="margin-left:10px">Expected Status</span>'+
+        '<input class="k6-ep-minput" id="ep-es-'+n+'" type="number" style="width:65px" value="'+sExp+'">'+
+      '</div>'+
+
+      /* ── Tabs ── */
+      '<div class="k6-ep-tabs">'+
+        '<button class="k6-ep-tab on" data-t="params" onclick="window._epTab('+n+',\'params\')">📋 Params</button>'+
+        '<button class="k6-ep-tab" data-t="auth"   onclick="window._epTab('+n+',\'auth\')">🔑 Auth</button>'+
+        '<button class="k6-ep-tab" data-t="headers" onclick="window._epTab('+n+',\'headers\')">📨 Headers</button>'+
+        '<button class="k6-ep-tab" data-t="body"   onclick="window._epTab('+n+',\'body\')">📦 Body</button>'+
+      '</div>'+
+
+      /* ── Params tab ── */
+      '<div class="k6-ep-tc on" data-t="params">'+
+        '<div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">'+
+          '<div>'+
+            '<div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Query Parameters</div>'+
+            '<table class="k6-ep-kv"><thead><tr><th style="width:22px"></th><th>Key</th><th>Value</th><th></th></tr></thead><tbody id="ep-qp-'+n+'"></tbody></table>'+
+            '<button class="k6-ep-addrow" onclick="window._epKv(\'ep-qp-'+n+'\')">+ Add Query Param</button>'+
+          '</div>'+
+          '<div>'+
+            '<div style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">Path Parameters <small style="font-weight:400;color:#475569;text-transform:none">(replace :name in URL)</small></div>'+
+            '<table class="k6-ep-kv"><thead><tr><th style="width:22px"></th><th>:param</th><th>Value</th><th></th></tr></thead><tbody id="ep-pp-'+n+'"></tbody></table>'+
+            '<button class="k6-ep-addrow" onclick="window._epKv(\'ep-pp-'+n+'\')">+ Add Path Param</button>'+
+          '</div>'+
+        '</div>'+
+      '</div>'+
+
+      /* ── Auth tab ── */
+      '<div class="k6-ep-tc" data-t="auth">'+
+        '<div class="k6-ep-auth-wrap">'+
+          '<div class="k6-ep-af">'+
+            '<label>Auth Type</label>'+
+            '<select id="ep-at-'+n+'" onchange="window._epAuth('+n+')">'+
+              ['None','Bearer Token','Basic Auth','API Key','Custom Header','Session (Frappe Login)'].map(function(a){return '<option'+(a===sAuth?' selected':'')+'>'+a+'</option>';}).join('')+
+            '</select>'+
+          '</div>'+
+          '<div id="ep-af-'+n+'"></div>'+
+        '</div>'+
+      '</div>'+
+
+      /* ── Headers tab ── */
+      '<div class="k6-ep-tc" data-t="headers">'+
+        '<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">'+
+          '<button class="k6-ep-addrow" style="width:auto;padding:4px 12px" onclick="window._epKv(\'ep-hd-'+n+'\',\'Content-Type\',\'application/json\')">+ Content-Type: JSON</button>'+
+          '<button class="k6-ep-addrow" style="width:auto;padding:4px 12px" onclick="window._epKv(\'ep-hd-'+n+'\',\'Accept\',\'application/json\')">+ Accept: JSON</button>'+
+          '<button class="k6-ep-addrow" style="width:auto;padding:4px 12px" onclick="window._epKv(\'ep-hd-'+n+'\',\'X-Frappe-CSRF-Token\',\'fetch\')">+ CSRF Token</button>'+
+        '</div>'+
+        '<table class="k6-ep-kv"><thead><tr><th style="width:22px" title="Enabled">✓</th><th>Header Name</th><th>Value</th><th></th></tr></thead><tbody id="ep-hd-'+n+'"></tbody></table>'+
+        '<button class="k6-ep-addrow" onclick="window._epKv(\'ep-hd-'+n+'\')">+ Add Custom Header</button>'+
+      '</div>'+
+
+      /* ── Body tab ── */
+      '<div class="k6-ep-tc" data-t="body">'+
+        '<div class="k6-ep-bts">'+
+          '<span style="font-size:11px;color:#6b7280;align-self:center;margin-right:4px">Type:</span>'+
+          ['none','json','form-data','urlencoded','text'].map(function(bt){
+            return '<button class="k6-ep-bt'+(bt===sBt?' on':'')+'" data-bt="'+bt+'" onclick="window._epBt('+n+',\''+bt+'\')">'+bt+'</button>';
+          }).join('')+
+        '</div>'+
+        '<div id="ep-fd-wrap-'+n+'" style="display:none">'+
+          '<table class="k6-ep-kv"><thead><tr><th style="width:22px"></th><th>Field Name</th><th>Value</th><th></th></tr></thead><tbody id="ep-fd-'+n+'"></tbody></table>'+
+          '<button class="k6-ep-addrow" onclick="window._epKv(\'ep-fd-'+n+'\')">+ Add Field</button>'+
+        '</div>'+
+        '<textarea class="k6-ep-ta" id="ep-body-'+n+'" style="display:none" placeholder=\'{"key": "value"}\'></textarea>'+
+        '<div style="display:flex;gap:6px;margin-top:8px" id="ep-ba-'+n+'" style="display:none">'+
+          '<button class="k6-btn default sm" onclick="window._epPretty('+n+')" style="font-size:11px">⇄ Pretty Print</button>'+
+          '<button class="k6-btn default sm" onclick="window._epValidate('+n+')" style="font-size:11px">✓ Validate JSON</button>'+
+        '</div>'+
+      '</div>'+
+
+      /* ── Response panel ── */
+      '<div class="k6-ep-resp" id="ep-resp-'+n+'">'+
+        '<div class="k6-ep-resp-bar">'+
+          '<span style="font-size:11px;font-weight:600;color:#64748b;text-transform:uppercase;letter-spacing:.5px">Response</span>'+
+          '<span class="k6-ep-stat" id="ep-rsc-'+n+'">–</span>'+
+          '<span id="ep-rtm-'+n+'" style="font-size:12px;color:#6b7280"></span>'+
+          '<span id="ep-rsz-'+n+'" style="font-size:12px;color:#6b7280"></span>'+
+          '<div style="margin-left:auto;display:flex;gap:5px">'+
+            '<button class="k6-ep-resp-tab on" id="ep-rt-btn-'+n+'-body" onclick="window._epRespTab('+n+',\'body\')">Body</button>'+
+            '<button class="k6-ep-resp-tab" id="ep-rt-btn-'+n+'-headers" onclick="window._epRespTab('+n+',\'headers\')">Headers</button>'+
+            '<button class="k6-ep-resp-tab" onclick="window._epCopy(\'ep-rb-'+n+'\')" title="Copy response body">📋 Copy</button>'+
+          '</div>'+
+        '</div>'+
+        '<div id="ep-rt-pnl-'+n+'-body"><pre class="k6-ep-resp-body" id="ep-rb-'+n+'"></pre></div>'+
+        '<div id="ep-rt-pnl-'+n+'-headers" style="display:none"><div class="k6-ep-resp-hdrs-tbl" id="ep-rh-'+n+'"></div></div>'+
+      '</div>';
+
+    document.getElementById('ep-list').appendChild(card);
+
+    /* populate saved data */
+    sParams.forEach(function(p){ window._epKv('ep-qp-'+n, p.key, p.value, p.enabled); });
+    sHeaders.forEach(function(h){ window._epKv('ep-hd-'+n, h.key, h.value, h.enabled); });
+    Object.entries(sPathP).forEach(function(kv){ window._epKv('ep-pp-'+n, kv[0], kv[1]); });
+    if (sBt!=='none') {
+      if (sBt==='form-data'||sBt==='urlencoded') {
+        try { Object.entries(JSON.parse(sBody||'{}')).forEach(function(kv){ window._epKv('ep-fd-'+n, kv[0], kv[1]); }); } catch(e){}
+      } else {
+        var ta = document.getElementById('ep-body-'+n);
+        if (ta) ta.value = sBody;
+      }
+      window._epBt(n, sBt);
+    }
+    window._epAuth(n);
+    /* pre-fill saved auth credentials */
+    if (sAuthCfg.token && document.getElementById('ep-atk-'+n)) document.getElementById('ep-atk-'+n).value = sAuthCfg.token;
+    if (sAuthCfg.username && document.getElementById('ep-au-'+n)) document.getElementById('ep-au-'+n).value = sAuthCfg.username;
+    if (sAuthCfg.password && document.getElementById('ep-ap-'+n)) document.getElementById('ep-ap-'+n).value = sAuthCfg.password;
   }
 
   function gatherEps() {
-    var rows = document.querySelectorAll(".k6-ep-row");
     var eps = [];
-    rows.forEach(function(row) {
-      var n = row.id.replace("ep-row-", "");
+    document.querySelectorAll('.k6-ep-card').forEach(function(card) {
+      var n = card.id.replace('ep-row-','');
+      var authType = _gv('ep-at-'+n);
+      var authCfg  = _getAuthCfg(n);
+      var bd       = _getBody(n);
+      var params   = _kvList('ep-qp-'+n);
+      var hdrs     = _kvList('ep-hd-'+n);
+      var pathP    = {};
+      _kvList('ep-pp-'+n).forEach(function(kv){ pathP[kv.key]=kv.value; });
+
+      /* flatten for k6_generator */
+      var authVal = '';
+      if (authType==='Bearer Token') authVal = authCfg.token||'';
+      else if (authType==='Basic Auth'||authType==='Session (Frappe Login)') authVal=(authCfg.username||'')+(authCfg.password?':'+authCfg.password:'');
+      else if (authType==='API Key') authVal=(authCfg.header||'X-API-Key')+':'+(authCfg.value||'');
+      else if (authType==='Custom Header') authVal=JSON.stringify({[authCfg.header||'Authorization']:authCfg.value||''});
+
+      var hdrsObj={};
+      hdrs.filter(function(h){return h.enabled&&h.key;}).forEach(function(h){hdrsObj[h.key]=h.value;});
+      var paramsObj={};
+      params.filter(function(p){return p.enabled&&p.key;}).forEach(function(p){paramsObj[p.key]=p.value;});
+
       eps.push({
-        http_method:     document.getElementById("ep-method-" + n).value,
-        endpoint_url:    document.getElementById("ep-url-" + n).value.trim(),
-        api_name:        document.getElementById("ep-name-" + n).value.trim() || "Endpoint",
-        expected_status: 200,
-        weight:          parseInt(document.getElementById("ep-weight-" + n).value) || 1,
+        http_method:     _gv('ep-m-'+n)||'GET',
+        endpoint_url:    _gv('ep-url-'+n).trim(),
+        api_name:        _gv('ep-name-'+n).trim()||'Endpoint '+n,
+        expected_status: parseInt(_gv('ep-es-'+n))||200,
+        weight:          parseInt(_gv('ep-weight-'+n))||1,
+        auth_type:       authType,
+        auth_value:      authVal,
+        auth_config:     JSON.stringify(authCfg),
+        headers:         JSON.stringify(hdrsObj),
+        query_params:    JSON.stringify(paramsObj),
+        path_params:     JSON.stringify(pathP),
+        body_type:       bd.body_type,
+        payload:         bd.payload,
       });
     });
     return eps;
@@ -612,6 +1035,26 @@ function _k6Init() {
     var el = document.getElementById("builder-msg");
     el.innerHTML = txt ? '<div class="k6-alert ' + (type || "info") + '">' + txt + '</div>' : "";
   }
+
+  window.loadConfigIntoBuilder = function(name) {
+    api("frappe_k6.api.load_test.get_config", {config_name: name}, function(cfg) {
+      if (!cfg) return;
+      document.getElementById("b-name").value      = cfg.test_name || name;
+      document.getElementById("b-scenario").value  = cfg.scenario_type || "load";
+      document.getElementById("b-vus").value        = cfg.virtual_users || 10;
+      document.getElementById("b-duration").value  = cfg.duration || "5m";
+      document.getElementById("b-ramp-up").value   = cfg.ramp_up_time || "1m";
+      document.getElementById("b-ramp-down").value = cfg.ramp_down_time || "30s";
+      document.getElementById("b-max-vus").value   = cfg.max_vus || 100;
+      document.getElementById("b-think").value     = cfg.think_time || 1;
+      document.getElementById("ep-list").innerHTML = "";
+      epCount = 0;
+      (cfg.endpoints || []).forEach(function(ep) { addEpRow(ep); });
+      if (!cfg.endpoints || !cfg.endpoints.length) addEpRow();
+      document.querySelector("[data-tab='builder']").click();
+      showMsg("✏ Editing: <strong>" + (cfg.test_name || name) + "</strong> — modify and Save to update.", "info");
+    });
+  };
 
   document.getElementById("btn-save").addEventListener("click", function() {
     var p = buildPayload();
