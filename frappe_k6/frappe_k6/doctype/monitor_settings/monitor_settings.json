@@ -1,44 +1,117 @@
 {
  "actions": [],
- "creation": "2024-06-26 00:00:00.000000",
+ "creation": "2024-06-26 00:00:00",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "site_name", "base_url", "column_break_a",
-  "refresh_interval", "metrics_retention_days",
+  "site_name",
+  "base_url",
+  "column_break_a",
+  "refresh_interval",
+  "metrics_retention_days",
   "section_integrations",
-  "prometheus_enabled", "prometheus_url",
+  "prometheus_enabled",
+  "prometheus_url",
   "column_break_b",
-  "grafana_enabled", "grafana_url",
+  "grafana_enabled",
+  "grafana_url",
   "section_k6",
-  "k6_binary_path", "k6_reports_dir"
+  "k6_binary_path",
+  "k6_reports_dir"
  ],
  "fields": [
-  {"fieldname": "site_name", "fieldtype": "Data", "label": "Site Name", "read_only": 1},
-  {"fieldname": "base_url", "fieldtype": "Data", "label": "Base URL"},
-  {"fieldname": "column_break_a", "fieldtype": "Column Break"},
-  {"fieldname": "refresh_interval", "fieldtype": "Int", "label": "Dashboard Refresh (seconds)", "default": 5},
-  {"fieldname": "metrics_retention_days", "fieldtype": "Int", "label": "Metrics Retention (days)", "default": 30},
-  {"fieldname": "section_integrations", "fieldtype": "Section Break", "label": "Integrations"},
-  {"fieldname": "prometheus_enabled", "fieldtype": "Check", "label": "Prometheus Enabled"},
-  {"fieldname": "prometheus_url", "fieldtype": "Data", "label": "Prometheus URL", "default": "http://localhost:9090"},
-  {"fieldname": "column_break_b", "fieldtype": "Column Break"},
-  {"fieldname": "grafana_enabled", "fieldtype": "Check", "label": "Grafana Enabled"},
-  {"fieldname": "grafana_url", "fieldtype": "Data", "label": "Grafana URL", "default": "http://localhost:3000"},
-  {"fieldname": "section_k6", "fieldtype": "Section Break", "label": "k6 Settings"},
-  {"fieldname": "k6_binary_path", "fieldtype": "Data", "label": "k6 Binary Path", "default": "k6"},
-  {"fieldname": "k6_reports_dir", "fieldtype": "Data", "label": "Reports Directory"}
+  {
+   "fieldname": "site_name",
+   "fieldtype": "Data",
+   "label": "Site Name"
+  },
+  {
+   "fieldname": "base_url",
+   "fieldtype": "Data",
+   "label": "Base URL"
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "5",
+   "fieldname": "refresh_interval",
+   "fieldtype": "Int",
+   "label": "Dashboard Refresh (seconds)"
+  },
+  {
+   "default": "30",
+   "fieldname": "metrics_retention_days",
+   "fieldtype": "Int",
+   "label": "Metrics Retention (days)"
+  },
+  {
+   "fieldname": "section_integrations",
+   "fieldtype": "Section Break",
+   "label": "Integrations"
+  },
+  {
+   "default": "0",
+   "fieldname": "prometheus_enabled",
+   "fieldtype": "Check",
+   "label": "Prometheus Enabled"
+  },
+  {
+   "default": "http://localhost:9090",
+   "fieldname": "prometheus_url",
+   "fieldtype": "Data",
+   "label": "Prometheus URL"
+  },
+  {
+   "fieldname": "column_break_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "0",
+   "fieldname": "grafana_enabled",
+   "fieldtype": "Check",
+   "label": "Grafana Enabled"
+  },
+  {
+   "default": "http://localhost:3000",
+   "fieldname": "grafana_url",
+   "fieldtype": "Data",
+   "label": "Grafana URL"
+  },
+  {
+   "fieldname": "section_k6",
+   "fieldtype": "Section Break",
+   "label": "k6 Settings"
+  },
+  {
+   "default": "k6",
+   "fieldname": "k6_binary_path",
+   "fieldtype": "Data",
+   "label": "k6 Binary Path"
+  },
+  {
+   "fieldname": "k6_reports_dir",
+   "fieldtype": "Data",
+   "label": "Reports Directory"
+  }
  ],
  "issingle": 1,
  "links": [],
- "modified": "2024-06-26 00:00:00.000000",
+ "modified": "2026-06-28 17:50:13.644115",
  "modified_by": "Administrator",
  "module": "Frappe K6",
  "name": "Monitor Settings",
  "owner": "Administrator",
  "permissions": [
-  {"read": 1, "role": "System Manager", "write": 1}
+  {
+   "read": 1,
+   "role": "System Manager",
+   "write": 1
+  }
  ],
+ "row_format": "Dynamic",
  "sort_field": "modified",
- "sort_order": "DESC"
+ "sort_order": "DESC",
+ "states": []
 }
