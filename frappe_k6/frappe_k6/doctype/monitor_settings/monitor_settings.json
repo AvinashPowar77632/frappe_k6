@@ -15,6 +15,11 @@
   "column_break_b",
   "grafana_enabled",
   "grafana_url",
+  "section_logs",
+  "loki_enabled",
+  "loki_url",
+  "column_break_c",
+  "promtail_url",
   "section_k6",
   "k6_binary_path",
   "k6_reports_dir"
@@ -78,6 +83,33 @@
    "fieldname": "grafana_url",
    "fieldtype": "Data",
    "label": "Grafana URL"
+  },
+  {
+   "fieldname": "section_logs",
+   "fieldtype": "Section Break",
+   "label": "Log Aggregation (Loki + Promtail)"
+  },
+  {
+   "default": "0",
+   "fieldname": "loki_enabled",
+   "fieldtype": "Check",
+   "label": "Loki Enabled"
+  },
+  {
+   "default": "http://localhost:3100",
+   "fieldname": "loki_url",
+   "fieldtype": "Data",
+   "label": "Loki URL"
+  },
+  {
+   "fieldname": "column_break_c",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "http://localhost:9080",
+   "fieldname": "promtail_url",
+   "fieldtype": "Data",
+   "label": "Promtail URL"
   },
   {
    "fieldname": "section_k6",
