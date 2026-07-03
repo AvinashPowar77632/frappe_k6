@@ -25,7 +25,9 @@ add_to_apps_screen = [
 doctype_js = {
     "Monitor Settings":  "public/js/monitor_settings.js",
     "Load Test Config":  "public/js/load_test_config.js",
+    "Remote Server":     "frappe_k6/doctype/remote_server/remote_server.js",
 }
+
 
 scheduler_events = {
     "all": [

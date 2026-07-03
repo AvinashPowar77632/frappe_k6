@@ -51,6 +51,7 @@ def after_install():
     steps = [
         ("Directories",             lambda: _setup_directories()),
         ("Monitor Settings",        lambda: _configure_monitor_settings(server_ip, port)),
+        ("Register Local Server",   lambda: _register_local_server(server_ip)),
         ("Sample Load Test Configs",lambda: _create_sample_configs()),
         ("k6",                      lambda: _install_k6()),
         ("node_exporter",           lambda: _setup_node_exporter()),
@@ -149,6 +150,44 @@ def _configure_monitor_settings(server_ip, port):
     except Exception:
         pass
     _log(f"     site={frappe.local.site}  base_url={s.base_url}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Step 2b — Register localhost as a Remote Server record
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _register_local_server(server_ip):
+    """
+    Create (or update) a Remote Server record for this machine so that
+    Prometheus config is generated with proper server_name / env labels
+    and the multi-server overview dashboard shows the local server.
+    """
+    try:
+        if not frappe.db.exists("DocType", "Remote Server"):
+            return  # DocType not yet migrated
+        name = "local"
+        if frappe.db.exists("Remote Server", name):
+            doc = frappe.get_doc("Remote Server", name)
+        else:
+            doc = frappe.new_doc("Remote Server")
+            doc.server_name = name
+        doc.host                    = server_ip
+        doc.environment             = "Production"
+        doc.enabled                 = 1
+        doc.is_local                = 1
+        doc.tags                    = "local,frappe_k6"
+        doc.node_exporter_enabled   = 1
+        doc.node_exporter_port      = 9100
+        doc.redis_exporter_enabled  = 0   # using frappe_k6 exporter for Redis
+        doc.db_exporter_enabled     = 0   # using frappe_k6 exporter for DB
+        doc.promtail_enabled        = 1
+        doc.promtail_port           = 9080
+        doc.notes                   = "Auto-registered by frappe_k6 installer"
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        _log(f"     registered local Remote Server: {name}")
+    except Exception as exc:
+        _log(f"     _register_local_server skipped: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -694,11 +733,33 @@ providers:
     # Dashboard JSON directory
     _run_sudo(["mkdir", "-p", "/var/lib/grafana/dashboards"])
 
-    dashboard_src = os.path.join(_SETUP_DIR, "frappe_k6_dashboard.json")
-    if os.path.isfile(dashboard_src):
-        _run_sudo(["cp", dashboard_src, "/var/lib/grafana/dashboards/frappe_k6.json"])
-        _run_sudo(["chown", "grafana:grafana",
-                   "/var/lib/grafana/dashboards/frappe_k6.json"])
+    # Regenerate dashboards from gen_dashboards.py if available
+    gen_script = os.path.join(_SETUP_DIR, "gen_dashboards.py")
+    if os.path.isfile(gen_script):
+        try:
+            import subprocess
+            subprocess.run([sys.executable, gen_script], check=True, timeout=30)
+            _log("     dashboards regenerated via gen_dashboards.py")
+        except Exception as exc:
+            _log(f"     gen_dashboards.py skipped: {exc}")
+
+    # Copy all dashboard JSON files
+    _dashboard_files = [
+        "frappe_k6_dashboard.json",
+        "frappe_k6_remote_server_dashboard.json",
+        "frappe_k6_multi_dashboard.json",
+        "frappe_k6_db_dashboard.json",
+        "frappe_k6_redis_dashboard.json",
+        "frappe_k6_worker_dashboard.json",
+        "frappe_k6_node_dashboard.json",
+    ]
+    for fname in _dashboard_files:
+        src = os.path.join(_SETUP_DIR, fname)
+        dst = f"/var/lib/grafana/dashboards/{fname}"
+        if os.path.isfile(src):
+            _run_sudo(["cp", src, dst])
+            _run_sudo(["chown", "grafana:grafana", dst])
+
     # Trigger Grafana to reload provisioned dashboards (non-destructive)
     try:
         import urllib.request as ur, base64
@@ -712,15 +773,26 @@ providers:
 
 
 def _import_dashboard_via_api():
-    """Wait for Grafana to be ready, then import the dashboard JSON via API."""
+    """Wait for Grafana to be ready, then import all dashboard JSON files via API."""
     import time
     import urllib.request as ur
     import urllib.error
     import base64
 
-    dashboard_src = os.path.join(_SETUP_DIR, "frappe_k6_dashboard.json")
-    if not os.path.isfile(dashboard_src):
+    _all_dashboards = [
+        "frappe_k6_dashboard.json",
+        "frappe_k6_remote_server_dashboard.json",
+        "frappe_k6_multi_dashboard.json",
+        "frappe_k6_db_dashboard.json",
+        "frappe_k6_redis_dashboard.json",
+        "frappe_k6_worker_dashboard.json",
+        "frappe_k6_node_dashboard.json",
+    ]
+    dashboard_files = [os.path.join(_SETUP_DIR, f) for f in _all_dashboards
+                       if os.path.isfile(os.path.join(_SETUP_DIR, f))]
+    if not dashboard_files:
         return
+    dashboard_src = dashboard_files[0]  # used below for auth check
 
     grafana_url = "http://localhost:3000"
     # Try default password first, then common changed passwords
@@ -748,27 +820,26 @@ def _import_dashboard_via_api():
         except Exception:
             time.sleep(2)
 
-    with open(dashboard_src) as f:
-        dashboard = json.load(f)
-
-    payload = json.dumps({
-        "dashboard": dashboard,
-        "overwrite": True,
-        "folderId": 0,
-    }).encode()
-
-    try:
-        req = ur.Request(
-            f"{grafana_url}/api/dashboards/db",
-            data=payload,
-            headers=headers,
-            method="POST",
-        )
-        with ur.urlopen(req, timeout=10) as r:
-            result = json.loads(r.read())
-            _log(f"     dashboard imported: {result.get('url', 'ok')}")
-    except Exception as exc:
-        _log(f"     dashboard API import skipped: {exc}")
+    for dash_path in dashboard_files:
+        try:
+            with open(dash_path) as f:
+                dashboard = json.load(f)
+            payload = json.dumps({
+                "dashboard": dashboard,
+                "overwrite": True,
+                "folderId": 0,
+            }).encode()
+            req = ur.Request(
+                f"{grafana_url}/api/dashboards/db",
+                data=payload,
+                headers=headers,
+                method="POST",
+            )
+            with ur.urlopen(req, timeout=10) as r:
+                result = json.loads(r.read())
+                _log(f"     dashboard imported: {result.get('url', os.path.basename(dash_path))}")
+        except Exception as exc:
+            _log(f"     dashboard {os.path.basename(dash_path)} import skipped: {exc}")
 
 
 def _grafana_auth_header():
