@@ -29,6 +29,8 @@ class K6MonitorPage {
     this.sysHistory = { labels: [], cpu: [], mem: [], netSent: [], netRecv: [] };
     this.liveHistory = { labels: [], rps: [], avg: [] };
     this.activeRun = null;
+    this.activeRunTargetServer = null;
+    this.remoteServers = [];
     this.refreshInterval = 5000;
     this._timers = [];
     this._endpointCount = 0;
@@ -36,6 +38,7 @@ class K6MonitorPage {
     this._injectStyles();
     this._render();
     this._bindEvents();
+    this._fetchRemoteServers();
     this._startPolling();
     this._loadChartJs(() => this._initCharts());
   }
@@ -109,7 +112,10 @@ class K6MonitorPage {
       <div class="k6-chart-panel"><div class="k6-chart-title">Network I/O (MB)</div><canvas id="chart-network" height="90"></canvas></div>
     </div>
     <div id="k6-active-banner" class="k6-active-banner" style="display:none">
-      <div class="k6-section-label">🔴 Active Load Test</div>
+      <div class="k6-active-header">
+        <div class="k6-section-label" style="margin:0">🔴 Active Load Test</div>
+        <div id="k6-active-target-badge" style="display:none;margin-left:16px;font-size:12px;color:#f97316;font-weight:700"></div>
+      </div>
       <div class="k6-live-cards">
         <div class="k6-live-card"><span class="k6-lv-label">RPS</span><span class="k6-lv-val" id="lv-rps">–</span></div>
         <div class="k6-live-card"><span class="k6-lv-label">Avg ms</span><span class="k6-lv-val" id="lv-avg">–</span></div>
@@ -117,6 +123,18 @@ class K6MonitorPage {
         <div class="k6-live-card"><span class="k6-lv-label">Requests</span><span class="k6-lv-val" id="lv-reqs">–</span></div>
         <div class="k6-live-card"><span class="k6-lv-label">Errors</span><span class="k6-lv-val k6-err" id="lv-errs">–</span></div>
         <div class="k6-live-card"><span class="k6-lv-label">VUs</span><span class="k6-lv-val" id="lv-vus">–</span></div>
+      </div>
+      <div id="k6-remote-server-panel" style="display:none;margin:10px 0;padding:10px 14px;background:#041228;border:1px solid #1e3a5f;border-radius:8px;">
+        <div style="font-size:11px;font-weight:700;color:#3b82f6;text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px">🌐 Target Server — <span id="lv-srv-name">–</span></div>
+        <div class="k6-live-cards" style="grid-template-columns:repeat(6,1fr)">
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">CPU %</span><span class="k6-lv-val" id="lv-srv-cpu" style="color:#f97316">–</span></div>
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">RAM %</span><span class="k6-lv-val" id="lv-srv-mem" style="color:#3b82f6">–</span></div>
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">Disk %</span><span class="k6-lv-val" id="lv-srv-disk" style="color:#8b5cf6">–</span></div>
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">RX KB/s</span><span class="k6-lv-val" id="lv-srv-rx" style="color:#22c55e">–</span></div>
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">TX KB/s</span><span class="k6-lv-val" id="lv-srv-tx" style="color:#a855f7">–</span></div>
+          <div class="k6-live-card" style="background:#041228;border-color:#1e3a5f"><span class="k6-lv-label">Load 1m</span><span class="k6-lv-val" id="lv-srv-load" style="color:#eab308">–</span></div>
+        </div>
+        <div style="margin-top:8px;font-size:11px;color:#374151" id="lv-srv-grafana-link"></div>
       </div>
       <div class="k6-chart-panel" style="margin-top:10px"><div class="k6-chart-title">Live: Requests &amp; Response Time</div><canvas id="chart-live" height="80"></canvas></div>
       <div style="margin-top:8px;text-align:right"><button class="btn btn-sm btn-danger" id="btn-stop-active">⏹ Stop Test</button></div>
@@ -127,8 +145,8 @@ class K6MonitorPage {
     <div class="k6-section-label">🚀 Saved Load Test Configs</div>
     <div style="margin-bottom:10px"><button class="btn btn-sm btn-primary" id="btn-goto-builder">+ New Test Config</button></div>
     <table class="table table-bordered k6-table">
-      <thead><tr><th>Test Name</th><th>Scenario</th><th>VUs</th><th>Duration</th><th>Status</th><th>Last Run</th><th>Actions</th></tr></thead>
-      <tbody id="configs-tbody"><tr><td colspan="7" class="text-center text-muted">Loading...</td></tr></tbody>
+      <thead><tr><th>Test Name</th><th>Scenario</th><th>VUs</th><th>Duration</th><th>Target</th><th>Status</th><th>Last Run</th><th>Actions</th></tr></thead>
+      <tbody id="configs-tbody"><tr><td colspan="8" class="text-center text-muted">Loading...</td></tr></tbody>
     </table>
   </div>
 
@@ -145,6 +163,28 @@ class K6MonitorPage {
             <option value="spike">Spike – sudden burst</option>
             <option value="soak">Soak – long endurance</option>
           </select>
+        </div>
+      </div>
+      <div class="k6-target-section">
+        <div class="k6-section-label" style="margin-bottom:8px">🎯 Test Target</div>
+        <div class="k6-form-row" style="margin-bottom:8px">
+          <div class="k6-form-group k6-sm">
+            <label>Target Type</label>
+            <select class="form-control" id="b-target-type">
+              <option value="Local Server">🏠 Local Server</option>
+              <option value="Remote Server">🌐 Remote Server</option>
+            </select>
+          </div>
+          <div class="k6-form-group" id="b-remote-server-wrap" style="display:none">
+            <label>Remote Server</label>
+            <select class="form-control" id="b-remote-server">
+              <option value="">— select server —</option>
+            </select>
+          </div>
+          <div class="k6-form-group k6-lg" id="b-base-url-wrap" style="display:none">
+            <label>Target Base URL <span style="color:#64748b;font-weight:400">(auto-filled, override if needed)</span></label>
+            <input type="text" class="form-control" id="b-target-url" placeholder="http://10.0.0.50:8000">
+          </div>
         </div>
       </div>
       <div class="k6-form-row">
@@ -170,8 +210,8 @@ class K6MonitorPage {
   <div class="k6-tab-content" id="tab-history">
     <div class="k6-section-label">📋 Test Run History</div>
     <table class="table table-bordered k6-table">
-      <thead><tr><th>Run</th><th>Config</th><th>Scenario</th><th>Status</th><th>Started</th><th>Requests</th><th>Errors</th><th>RPS</th><th>Avg ms</th><th>P95 ms</th></tr></thead>
-      <tbody id="history-tbody"><tr><td colspan="10" class="text-center text-muted">Loading...</td></tr></tbody>
+      <thead><tr><th>Run</th><th>Config</th><th>Scenario</th><th>Target</th><th>Status</th><th>Started</th><th>Requests</th><th>Errors</th><th>RPS</th><th>Avg ms</th><th>P95 ms</th></tr></thead>
+      <tbody id="history-tbody"><tr><td colspan="11" class="text-center text-muted">Loading...</td></tr></tbody>
     </table>
   </div>
 </div>`;
@@ -338,12 +378,16 @@ class K6MonitorPage {
       callback: (r) => {
         const runs = r.message || [];
         if (runs.length > 0) {
-          this.activeRun = runs[0].name;
+          const run = runs[0];
+          this.activeRun = run.name;
           $("#k6-active-banner").show();
           this._fetchLiveMetrics(this.activeRun);
         } else {
           this.activeRun = null;
+          this.activeRunTargetServer = null;
           $("#k6-active-banner").hide();
+          $("#k6-remote-server-panel").hide();
+          $("#k6-active-target-badge").hide();
         }
       },
     });
@@ -355,7 +399,7 @@ class K6MonitorPage {
       args: { run_name: runName },
       callback: (r) => {
         if (!r.message) return;
-        const m = r.message.metrics || {};
+        const m   = r.message.metrics || {};
         const dur = m.http_req_duration || {};
         const reqs = m.http_reqs || {};
         const errs = m.http_req_failed || {};
@@ -367,6 +411,27 @@ class K6MonitorPage {
         $("#lv-reqs").text(reqs.count || 0);
         $("#lv-errs").text((errs.count || 0) + " (" + (m.error_rate || 0) + "%)");
         $("#lv-vus").text(vus.current || 0);
+
+        // Show remote server panel if target is a remote server
+        const target = r.message.target_server_name;
+        if (target && target !== "local") {
+          this.activeRunTargetServer = target;
+          $("#k6-active-target-badge").text("\uD83C\uDF10 Target: " + target).show();
+          $("#k6-remote-server-panel").show();
+          $("#lv-srv-name").text(target);
+          this._fetchRemoteServerMetrics(target);
+          // Grafana deep-dive link
+          const cfg = window._k6Cfg || {};
+          if (cfg.grafana) {
+            $("#lv-srv-grafana-link").html(
+              `<a href="${cfg.grafana}/d/frappe-k6-remote?var-server=${encodeURIComponent(target)}" target="_blank" style="color:#3b82f6">\uD83D\uDCCA Open Remote Server Dashboard in Grafana \u2192</a>`
+            );
+          }
+        } else {
+          this.activeRunTargetServer = null;
+          $("#k6-remote-server-panel").hide();
+          $("#k6-active-target-badge").hide();
+        }
 
         // Update live chart
         const timeline = m.timeline || [];
@@ -380,6 +445,46 @@ class K6MonitorPage {
     });
   }
 
+  _fetchRemoteServerMetrics(serverName) {
+    frappe.call({
+      method: "frappe_k6.api.load_test.get_remote_server_live_metrics",
+      args: { server_name: serverName },
+      callback: (r) => {
+        const d = r.message || {};
+        const fmt = (v) => v !== null && v !== undefined ? parseFloat(v).toFixed(1) : "–";
+        const fmtInt = (v) => v !== null && v !== undefined ? Math.round(v) : "–";
+        $("#lv-srv-cpu").text(fmt(d.cpu_percent) + (d.cpu_percent !== null ? "%" : ""));
+        $("#lv-srv-mem").text(fmt(d.memory_percent) + (d.memory_percent !== null ? "%" : ""));
+        $("#lv-srv-disk").text(fmt(d.disk_percent) + (d.disk_percent !== null ? "%" : ""));
+        $("#lv-srv-rx").text(fmtInt(d.network_rx_kbps));
+        $("#lv-srv-tx").text(fmtInt(d.network_tx_kbps));
+        $("#lv-srv-load").text(fmt(d.load_avg_1m));
+      },
+    });
+  }
+
+  _fetchRemoteServers() {
+    frappe.call({
+      method: "frappe_k6.api.load_test.get_remote_servers",
+      callback: (r) => {
+        this.remoteServers = r.message || [];
+        this._populateRemoteServers();
+      },
+    });
+  }
+
+  _populateRemoteServers() {
+    const $sel = $("#b-remote-server");
+    $sel.html('<option value="">— select server —</option>');
+    this.remoteServers.forEach(s => {
+      const label = `${s.server_name} (${s.environment || ""}) — ${s.host}`;
+      $sel.append(`<option value="${s.name}" data-url="${s.frappe_url || ''}" data-sname="${s.server_name}">${label}</option>`);
+    });
+    if (!this.remoteServers.length) {
+      $sel.append('<option value="" disabled>No remote servers configured</option>');
+    }
+  }
+
   // ── Configs Table ────────────────────────────────────────────
   _fetchConfigs() {
     frappe.call({
@@ -388,15 +493,19 @@ class K6MonitorPage {
         const rows = r.message || [];
         const tbody = $("#configs-tbody");
         if (!rows.length) {
-          tbody.html('<tr><td colspan="7" class="text-center text-muted">No configs yet. Create one in the Test Builder tab.</td></tr>');
+          tbody.html('<tr><td colspan="8" class="text-center text-muted">No configs yet. Create one in the Test Builder tab.</td></tr>');
           return;
         }
-        tbody.html(rows.map(c => `
-          <tr>
+        tbody.html(rows.map(c => {
+          const tgt = c.target_type === "Remote Server"
+            ? `<span style="color:#f97316;font-size:11px">🌐 ${c.remote_server || "remote"}</span>`
+            : `<span style="color:#64748b;font-size:11px">🏠 local</span>`;
+          return `<tr>
             <td><b>${c.test_name || c.name}</b></td>
             <td><span class="k6-badge-scenario k6-scenario-${c.scenario_type}">${c.scenario_type}</span></td>
             <td>${c.virtual_users}</td>
             <td>${c.duration}</td>
+            <td>${tgt}</td>
             <td><span class="k6-status k6-status-${(c.status || "").toLowerCase()}">${c.status || "Draft"}</span></td>
             <td>${c.last_run ? `<a href="/app/load-test-run/${c.last_run}">${c.last_run}</a>` : "–"}</td>
             <td>
@@ -404,7 +513,8 @@ class K6MonitorPage {
               <button class="btn btn-xs btn-default btn-edit-config" data-name="${c.name}">✏</button>
               <a href="/app/load-test-config/${c.name}" class="btn btn-xs btn-default" target="_blank">↗</a>
             </td>
-          </tr>`).join(""));
+          </tr>`;
+        }).join(""));
       },
     });
   }
@@ -418,14 +528,18 @@ class K6MonitorPage {
         const rows = r.message || [];
         const tbody = $("#history-tbody");
         if (!rows.length) {
-          tbody.html('<tr><td colspan="10" class="text-center text-muted">No runs yet.</td></tr>');
+          tbody.html('<tr><td colspan="11" class="text-center text-muted">No runs yet.</td></tr>');
           return;
         }
-        tbody.html(rows.map(row => `
-          <tr>
+        tbody.html(rows.map(row => {
+          const target = row.target_server_name && row.target_server_name !== "local"
+            ? `<span style="color:#f97316;font-size:11px">🌐 ${row.target_server_name}</span>`
+            : `<span style="color:#64748b;font-size:11px">🏠 local</span>`;
+          return `<tr>
             <td><a href="/app/load-test-run/${row.name}" target="_blank">${row.name}</a></td>
             <td>${row.config}</td>
             <td><span class="k6-badge-scenario k6-scenario-${row.scenario_type}">${row.scenario_type || "–"}</span></td>
+            <td>${target}</td>
             <td><span class="k6-status k6-status-${(row.status || "").toLowerCase()}">${row.status}</span></td>
             <td>${row.started_at ? row.started_at.slice(0, 16) : "–"}</td>
             <td>${row.total_requests || 0}</td>
@@ -433,7 +547,8 @@ class K6MonitorPage {
             <td>${row.requests_per_sec || 0}</td>
             <td>${row.avg_duration_ms || 0}</td>
             <td>${row.p95_duration_ms || 0}</td>
-          </tr>`).join(""));
+          </tr>`;
+        }).join(""));
       },
     });
   }
@@ -467,6 +582,21 @@ class K6MonitorPage {
       $(e.currentTarget).closest(".k6-ep-row").remove();
     });
 
+    // Target type toggle
+    $wrap.on("change", "#b-target-type", (e) => {
+      const isRemote = $(e.currentTarget).val() === "Remote Server";
+      $("#b-remote-server-wrap").toggle(isRemote);
+      $("#b-base-url-wrap").toggle(isRemote);
+      if (isRemote && !this.remoteServers.length) this._fetchRemoteServers();
+    });
+
+    // Remote server selection → auto-fill base URL
+    $wrap.on("change", "#b-remote-server", (e) => {
+      const $opt = $(e.currentTarget).find(":selected");
+      const url  = $opt.data("url") || "";
+      $("#b-target-url").val(url);
+    });
+
     // Save config
     $wrap.on("click", "#btn-save-config", () => this._saveConfig(false));
 
@@ -492,6 +622,12 @@ class K6MonitorPage {
       this._runConfig(name);
     });
 
+    // Edit config — load into builder
+    $wrap.on("click", ".btn-edit-config", (e) => {
+      const name = $(e.currentTarget).data("name");
+      this._loadConfigIntoBuilder(name);
+    });
+
     // Stop active test
     $wrap.on("click", "#btn-stop-active", () => {
       if (!this.activeRun) return;
@@ -511,6 +647,61 @@ class K6MonitorPage {
   }
 
   // ── Test Builder ─────────────────────────────────────────────
+  _loadConfigIntoBuilder(configName) {
+    frappe.call({
+      method: "frappe_k6.api.load_test.get_config",
+      args: { config_name: configName },
+      callback: (r) => {
+        if (!r.message) return;
+        const c = r.message;
+        const $wrap = $(this.wrapper);
+
+        $wrap.find("#b-test-name").val(c.test_name);
+        $wrap.find("#b-scenario").val(c.scenario_type);
+        $wrap.find("#b-vus").val(c.virtual_users);
+        $wrap.find("#b-duration").val(c.duration);
+        $wrap.find("#b-ramp-up").val(c.ramp_up_time);
+        $wrap.find("#b-ramp-down").val(c.ramp_down_time);
+        $wrap.find("#b-max-vus").val(c.max_vus);
+        $wrap.find("#b-think").val(c.think_time);
+
+        // Restore target
+        const targetType = c.target_type || "Local Server";
+        $wrap.find("#b-target-type").val(targetType);
+        if (targetType === "Remote Server") {
+          $("#b-remote-server-wrap").show();
+          $("#b-base-url-wrap").show();
+          if (c.remote_server) $wrap.find("#b-remote-server").val(c.remote_server);
+          if (c.target_base_url) $wrap.find("#b-target-url").val(c.target_base_url);
+        } else {
+          $("#b-remote-server-wrap").hide();
+          $("#b-base-url-wrap").hide();
+        }
+
+        // Restore endpoints
+        $("#endpoints-list").empty();
+        (c.endpoints || []).forEach(ep => {
+          this._addEndpointRow();
+          const $row = $("#endpoints-list .k6-ep-row").last();
+          $row.find(".ep-name").val(ep.api_name);
+          $row.find(".ep-method").val(ep.http_method);
+          $row.find(".ep-url").val(ep.endpoint_url);
+          $row.find(".ep-status").val(ep.expected_status);
+          $row.find(".ep-auth-type").val(ep.auth_type);
+          $row.find(".ep-auth-val").val(ep.auth_value);
+          $row.find(".ep-headers").val(ep.headers);
+          $row.find(".ep-params").val(ep.query_params);
+          $row.find(".ep-payload").val(ep.payload);
+          $row.find(".ep-weight").val(ep.weight);
+        });
+
+        // Switch to builder tab
+        $wrap.find(".k6-tab[data-tab='builder']").click();
+        $("#builder-msg").html(`<div class="alert alert-info">Loaded config <b>${c.test_name}</b> for editing. Saving will create a new config.</div>`);
+      },
+    });
+  }
+
   _addEndpointRow() {
     const i = ++this._endpointCount;
     const row = `
@@ -605,12 +796,19 @@ class K6MonitorPage {
 
     if (!endpoints.length) { $("#builder-msg").html('<div class="alert alert-danger">Add at least one endpoint.</div>'); return; }
 
+    const targetType   = $wrap.find("#b-target-type").val() || "Local Server";
+    const remoteServer = targetType === "Remote Server" ? ($wrap.find("#b-remote-server").val() || null) : null;
+    const targetUrl    = $wrap.find("#b-target-url").val().trim() || null;
+
     const doc = {
-      doctype:       "Load Test Config",
-      test_name:     name,
-      scenario_type: $wrap.find("#b-scenario").val(),
-      virtual_users: parseInt($wrap.find("#b-vus").val()),
-      duration:      $wrap.find("#b-duration").val(),
+      doctype:         "Load Test Config",
+      test_name:       name,
+      scenario_type:   $wrap.find("#b-scenario").val(),
+      virtual_users:   parseInt($wrap.find("#b-vus").val()),
+      duration:        $wrap.find("#b-duration").val(),
+      target_type:     targetType,
+      remote_server:   remoteServer,
+      target_base_url: targetUrl,
       ramp_up_time:  $wrap.find("#b-ramp-up").val(),
       ramp_down_time: $wrap.find("#b-ramp-down").val(),
       max_vus:       parseInt($wrap.find("#b-max-vus").val()),
@@ -723,6 +921,10 @@ class K6MonitorPage {
 
 /* Active test banner */
 .k6-active-banner { background:#1a0a0a; border:1px solid #ef444444; border-radius:10px; padding:16px; margin-bottom:20px; }
+.k6-active-header { display:flex; align-items:center; margin-bottom:10px; }
+
+/* Target section in builder */
+.k6-target-section { background:#0d1117; border:1px solid #1e293b; border-radius:8px; padding:12px 14px; margin-bottom:12px; }
 .k6-live-cards { display:grid; grid-template-columns:repeat(6,1fr); gap:10px; margin:10px 0; }
 @media(max-width:768px){ .k6-live-cards{grid-template-columns:repeat(3,1fr);} }
 .k6-live-card { background:#1e0d0d; border:1px solid #2d1b1b; border-radius:8px; padding:10px; text-align:center; }

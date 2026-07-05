@@ -9,7 +9,7 @@ import tempfile
 import frappe
 
 
-def generate_script(config_name: str, output_json_path: str) -> str:
+def generate_script(config_name: str, output_json_path: str, target_server: str = "local") -> str:
     """
     Generate a k6 JS script from the Load Test Config and write it to a temp file.
     Returns the path to the generated script.
@@ -198,7 +198,7 @@ def _endpoint_call(ep, session_headers_var=None, custom_headers=None) -> str:
     else:
         headers_expr = json.dumps(custom_headers or {"Content-Type": "application/json"})
 
-    opts = f'{{ headers: {headers_expr}, tags: {{ name: "{name}" }} }}'
+    opts = f'{{ headers: {headers_expr}, tags: {{ name: "{name}", target_server: __ENV.TARGET_SERVER || "local" }} }}'
 
     if method in ("GET", "DELETE"):
         call = f'http.{method.lower()}(\n      __ENV.K6_BASE_URL + "{url}",\n      {opts}\n    )'

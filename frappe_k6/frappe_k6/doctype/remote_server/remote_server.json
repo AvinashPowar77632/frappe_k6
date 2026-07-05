@@ -7,6 +7,7 @@
  "field_order": [
   "server_name",
   "host",
+  "frappe_url",
   "column_break_a",
   "environment",
   "enabled",
@@ -55,6 +56,12 @@
    "label": "Host / IP Address",
    "reqd": 1,
    "description": "Hostname or IP of the remote server (e.g. 192.168.1.100)"
+  },
+  {
+   "fieldname": "frappe_url",
+   "fieldtype": "Data",
+   "label": "Frappe App URL",
+   "description": "Full URL for K6 load testing (e.g. http://10.0.0.50:8000). Leave blank to skip load testing against this server."
   },
   {
    "fieldname": "column_break_a",
