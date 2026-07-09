@@ -1,0 +1,476 @@
+{
+  "id": null,
+  "uid": "frappe-k6-loadtest",
+  "title": "Frappe K6 \u2014 Load Test Performance",
+  "description": "Comprehensive K6 load test dashboard: API performance, latency percentiles, error analysis, status codes, connection timings, and virtual user load",
+  "tags": ["frappe", "k6", "load-test", "performance"],
+  "schemaVersion": 38,
+  "version": 1,
+  "timezone": "browser",
+  "refresh": "5s",
+  "time": { "from": "now-30m", "to": "now" },
+  "templating": {
+    "list": [
+      {
+        "name": "config",
+        "type": "query",
+        "label": "Test Config",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(frappe_k6_run_rps, config)", "refId": "A" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "target_server",
+        "type": "query",
+        "label": "Target Server",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(frappe_k6_run_rps{config=~\"$config\"}, target_server)", "refId": "A" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      },
+      {
+        "name": "scenario",
+        "type": "query",
+        "label": "Scenario",
+        "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "query": { "query": "label_values(frappe_k6_run_rps{config=~\"$config\"}, scenario)", "refId": "A" },
+        "refresh": 2,
+        "sort": 1,
+        "multi": false,
+        "includeAll": true,
+        "allValue": ".*",
+        "current": {}
+      }
+    ]
+  },
+  "panels": [
+
+    { "id": 1, "type": "row", "title": "\ud83e\uddea Load Test Summary", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 0 } },
+
+    { "id": 2, "type": "stat", "title": "Total Requests",
+      "gridPos": { "h": 4, "w": 3, "x": 0, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_requests{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Total", "refId": "A" }] },
+
+    { "id": 3, "type": "stat", "title": "Successful (2xx+3xx)",
+      "gridPos": { "h": 4, "w": 3, "x": 3, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_status_2xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"} + frappe_k6_run_status_3xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Success", "refId": "A" }] },
+
+    { "id": 4, "type": "stat", "title": "Failed Requests",
+      "gridPos": { "h": 4, "w": 3, "x": 6, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 10 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_failed{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Failed", "refId": "A" }] },
+
+    { "id": 5, "type": "stat", "title": "Error Rate",
+      "gridPos": { "h": 4, "w": 3, "x": 9, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "percent", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_error_rate{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Error %", "refId": "A" }] },
+
+    { "id": 6, "type": "stat", "title": "Requests / Second",
+      "gridPos": { "h": 4, "w": 3, "x": 12, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "reqps", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }, { "color": "green", "value": 5 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_rps{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "RPS", "refId": "A" }] },
+
+    { "id": 7, "type": "stat", "title": "Active VUs",
+      "gridPos": { "h": 4, "w": 3, "x": 15, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_vus{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "VUs", "refId": "A" }] },
+
+    { "id": 8, "type": "stat", "title": "Avg Response Time",
+      "gridPos": { "h": 4, "w": 3, "x": 18, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "ms", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 500 }, { "color": "red", "value": 1000 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_avg_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Avg ms", "refId": "A" }] },
+
+    { "id": 9, "type": "stat", "title": "P95 Response Time",
+      "gridPos": { "h": 4, "w": 3, "x": 21, "y": 1 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area", "textMode": "auto" },
+      "fieldConfig": { "defaults": { "unit": "ms", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1000 }, { "color": "red", "value": 2000 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_p95_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "P95 ms", "refId": "A" }] },
+
+    { "id": 20, "type": "row", "title": "\ud83d\ude80 API Performance Metrics", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 5 } },
+
+    { "id": 21, "type": "timeseries", "title": "Response Time Percentiles (ms)",
+      "description": "Shows Min, Avg, P50 (median), P90, P95, P99, and Max response times over the test duration",
+      "gridPos": { "h": 9, "w": 16, "x": 0, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "asc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2, "fillOpacity": 8, "pointSize": 4 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Min" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Avg" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P50 (Median)" }, "properties": [{ "id": "color", "value": { "fixedColor": "#B877D9", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P90" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FADE2A", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P95" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "P99" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Max" }, "properties": [{ "id": "color", "value": { "fixedColor": "#8F3BB8", "mode": "fixed" } }, { "id": "custom/lineStyle", "value": { "dash": [4, 4], "fill": "dash" } }] }
+        ]
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "A",
+          "expr": "frappe_k6_run_min_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Min" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "B",
+          "expr": "frappe_k6_run_avg_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Avg" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "C",
+          "expr": "frappe_k6_run_p50_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P50 (Median)" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "D",
+          "expr": "frappe_k6_run_p90_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P90" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "E",
+          "expr": "frappe_k6_run_p95_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P95" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "F",
+          "expr": "frappe_k6_run_p99_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P99" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "G",
+          "expr": "frappe_k6_run_max_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Max" }
+      ] },
+
+    { "id": 22, "type": "bargauge", "title": "Latency Snapshot (ms)",
+      "description": "Current latency distribution across percentiles",
+      "gridPos": { "h": 9, "w": 8, "x": 16, "y": 6 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "orientation": "horizontal",
+        "displayMode": "gradient",
+        "valueMode": "color",
+        "showUnfilled": true
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "min": 0, "color": { "mode": "thresholds" },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 500 }, { "color": "orange", "value": 1000 }, { "color": "red", "value": 2000 }] } }
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "A",
+          "expr": "frappe_k6_run_min_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Min" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "B",
+          "expr": "frappe_k6_run_avg_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Avg" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "C",
+          "expr": "frappe_k6_run_p50_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P50 Median" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "D",
+          "expr": "frappe_k6_run_p90_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P90" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "E",
+          "expr": "frappe_k6_run_p95_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P95" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "F",
+          "expr": "frappe_k6_run_p99_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "P99" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "G",
+          "expr": "frappe_k6_run_max_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Max" }
+      ] },
+
+    { "id": 23, "type": "timeseries", "title": "Requests per Second (RPS) \u2014 Throughput",
+      "description": "Live request throughput. Drops indicate server overload or test ramping down.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "reqps", "color": { "fixedColor": "#5794F2", "mode": "fixed" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20, "gradientMode": "opacity" } }
+      },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_rps{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "RPS", "refId": "A" }] },
+
+    { "id": 24, "type": "timeseries", "title": "Request Timing Breakdown (ms)",
+      "description": "TTFB (waiting), connection setup (blocked + connecting), data transfer (sending + receiving). High TTFB = slow server processing. High connecting = network latency.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 15 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "multi", "sort": "desc" },
+        "legend": { "displayMode": "table", "placement": "bottom", "calcs": ["lastNotNull", "mean"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "ms", "custom": { "lineWidth": 2, "fillOpacity": 10, "stacking": { "mode": "normal" } } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "TTFB (Waiting)" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FF9830", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Blocked" }, "properties": [{ "id": "color", "value": { "fixedColor": "#8F3BB8", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Connecting" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Sending" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Receiving" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "A",
+          "expr": "frappe_k6_run_ttfb_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "TTFB (Waiting)" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "B",
+          "expr": "frappe_k6_run_blocked_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Blocked" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "C",
+          "expr": "frappe_k6_run_connecting_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Connecting" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "D",
+          "expr": "frappe_k6_run_sending_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Sending" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "E",
+          "expr": "frappe_k6_run_receiving_ms{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Receiving" }
+      ] },
+
+    { "id": 25, "type": "timeseries", "title": "Network Throughput (KB)",
+      "description": "Total data sent and received over the test. Response size = Data Received \u00f7 Total Requests.",
+      "gridPos": { "h": 6, "w": 24, "x": 0, "y": 23 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "multi" },
+        "legend": { "displayMode": "list", "placement": "right", "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "kbytes", "custom": { "lineWidth": 2, "fillOpacity": 15 } },
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "Received KB" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "Sent KB" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "A",
+          "expr": "frappe_k6_run_data_recv_kb{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Received KB" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "B",
+          "expr": "frappe_k6_run_data_sent_kb{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "Sent KB" }
+      ] },
+
+    { "id": 40, "type": "row", "title": "\ud83d\udd34 Error Analysis", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 29 } },
+
+    { "id": 41, "type": "stat", "title": "HTTP 2xx (Success)",
+      "gridPos": { "h": 4, "w": 4, "x": 0, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_status_2xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "2xx", "refId": "A" }] },
+
+    { "id": 42, "type": "stat", "title": "HTTP 3xx (Redirect)",
+      "gridPos": { "h": 4, "w": 4, "x": 4, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_status_3xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "3xx", "refId": "A" }] },
+
+    { "id": 43, "type": "stat", "title": "HTTP 4xx (Client Error)",
+      "gridPos": { "h": 4, "w": 4, "x": 8, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "orange", "value": 10 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_status_4xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "4xx", "refId": "A" }] },
+
+    { "id": 44, "type": "stat", "title": "HTTP 5xx (Server Error)",
+      "gridPos": { "h": 4, "w": 4, "x": 12, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_status_5xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "5xx", "refId": "A" }] },
+
+    { "id": 45, "type": "stat", "title": "Checks Passed",
+      "gridPos": { "h": 4, "w": 4, "x": 16, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_checks_passed{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "\u2713 Passed", "refId": "A" }] },
+
+    { "id": 46, "type": "stat", "title": "Checks Failed",
+      "gridPos": { "h": 4, "w": 4, "x": 20, "y": 30 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "area" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_checks_failed{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "\u2717 Failed", "refId": "A" }] },
+
+    { "id": 47, "type": "timeseries", "title": "Error Rate % Over Time",
+      "description": "Sustained error rate above 1% indicates server instability. Spikes correlate with VU ramp-up.",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max", "mean"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "percent", "min": 0, "max": 100,
+          "color": { "fixedColor": "#F2495C", "mode": "fixed" },
+          "custom": { "lineWidth": 2, "fillOpacity": 20 },
+          "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "yellow", "value": 1 }, { "color": "red", "value": 5 }] } }
+      },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_error_rate{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Error Rate %", "refId": "A" }] },
+
+    { "id": 48, "type": "piechart", "title": "HTTP Status Code Distribution",
+      "description": "Proportion of response status codes. Ideal: >99% 2xx. Any 5xx indicates server errors.",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 34 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "reduceOptions": { "calcs": ["lastNotNull"] },
+        "pieType": "donut",
+        "displayLabels": ["percent", "name"],
+        "legend": { "displayMode": "table", "placement": "right", "calcs": ["lastNotNull"] },
+        "tooltip": { "mode": "single" }
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          { "matcher": { "id": "byName", "options": "2xx Success" }, "properties": [{ "id": "color", "value": { "fixedColor": "#73BF69", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "3xx Redirect" }, "properties": [{ "id": "color", "value": { "fixedColor": "#5794F2", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "4xx Client Error" }, "properties": [{ "id": "color", "value": { "fixedColor": "#FADE2A", "mode": "fixed" } }] },
+          { "matcher": { "id": "byName", "options": "5xx Server Error" }, "properties": [{ "id": "color", "value": { "fixedColor": "#F2495C", "mode": "fixed" } }] }
+        ]
+      },
+      "targets": [
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "A",
+          "expr": "frappe_k6_run_status_2xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "2xx Success" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "B",
+          "expr": "frappe_k6_run_status_3xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "3xx Redirect" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "C",
+          "expr": "frappe_k6_run_status_4xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "4xx Client Error" },
+        { "datasource": { "type": "prometheus", "uid": "prometheus" }, "refId": "D",
+          "expr": "frappe_k6_run_status_5xx{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}", "legendFormat": "5xx Server Error" }
+      ] },
+
+    { "id": 60, "type": "row", "title": "\ud83d\udc65 User Load Metrics", "collapsed": false,
+      "gridPos": { "h": 1, "w": 24, "x": 0, "y": 42 } },
+
+    { "id": 61, "type": "timeseries", "title": "Active Virtual Users (VUs) \u2014 Concurrent Load",
+      "description": "VU count follows the scenario ramp-up/ramp-down profile. Spikes in latency that correlate with VU increases indicate the application\u2019s concurrency limit.",
+      "gridPos": { "h": 9, "w": 12, "x": 0, "y": 43 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull", "max"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0,
+          "color": { "fixedColor": "#B877D9", "mode": "fixed" },
+          "custom": { "lineWidth": 2, "fillOpacity": 25, "gradientMode": "opacity" } }
+      },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_vus{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Active VUs", "refId": "A" }] },
+
+    { "id": 62, "type": "timeseries", "title": "Iterations Completed",
+      "description": "Total test iterations (full scenario loops) completed. Flat/declining slope = server cannot keep up with the configured VU count.",
+      "gridPos": { "h": 9, "w": 12, "x": 12, "y": 43 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": {
+        "tooltip": { "mode": "single" },
+        "legend": { "displayMode": "list", "placement": "bottom", "calcs": ["lastNotNull"] }
+      },
+      "fieldConfig": {
+        "defaults": { "unit": "short", "min": 0,
+          "color": { "fixedColor": "#73BF69", "mode": "fixed" },
+          "custom": { "lineWidth": 2, "fillOpacity": 15 } }
+      },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_iterations{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Iterations", "refId": "A" }] },
+
+    { "id": 63, "type": "stat", "title": "Max VUs Reached",
+      "gridPos": { "h": 4, "w": 6, "x": 0, "y": 52 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["max"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "purple", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_max_vus{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Max VUs", "refId": "A" }] },
+
+    { "id": 64, "type": "stat", "title": "Total Iterations",
+      "gridPos": { "h": 4, "w": 6, "x": 6, "y": 52 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "short", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_iterations{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Iterations", "refId": "A" }] },
+
+    { "id": 65, "type": "stat", "title": "Data Received",
+      "gridPos": { "h": 4, "w": 6, "x": 12, "y": 52 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "kbytes", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_data_recv_kb{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Received", "refId": "A" }] },
+
+    { "id": 66, "type": "stat", "title": "Data Sent",
+      "gridPos": { "h": 4, "w": 6, "x": 18, "y": 52 },
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] }, "colorMode": "background", "graphMode": "none" },
+      "fieldConfig": { "defaults": { "unit": "kbytes", "color": { "mode": "thresholds" },
+        "thresholds": { "mode": "absolute", "steps": [{ "color": "blue", "value": null }] } } },
+      "targets": [{ "datasource": { "type": "prometheus", "uid": "prometheus" },
+        "expr": "frappe_k6_run_data_sent_kb{config=~\"$config\",target_server=~\"$target_server\",scenario=~\"$scenario\"}",
+        "legendFormat": "Sent", "refId": "A" }] }
+
+  ],
+
+  "links": [
+    { "title": "K6 Monitor", "url": "/k6-monitor", "icon": "dashboard", "targetBlank": false },
+    { "title": "System Overview", "url": "http://localhost:3000/d/frappe-k6-monitor", "icon": "external link", "targetBlank": true }
+  ]
+}

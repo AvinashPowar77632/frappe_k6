@@ -9,8 +9,11 @@ import json
 import shutil
 import socket
 import subprocess
+import sys
 import tarfile
+import zipfile
 import urllib.request
+import urllib.parse
 
 import frappe
 
@@ -22,10 +25,14 @@ _SETUP_DIR    = os.path.join(_APP_DIR, "setup")
 _MON_DIR      = os.path.join(os.path.expanduser("~"), "monitoring")
 _PROM_DIR     = os.path.join(_MON_DIR, "prometheus")
 _NODE_DIR     = os.path.join(_MON_DIR, "node_exporter")
+_LOKI_DIR     = os.path.join(_MON_DIR, "loki")
+_PROMTAIL_DIR = os.path.join(_MON_DIR, "promtail")
 
 # ── Release versions ─────────────────────────────────────────────────────────
 _PROM_VER      = "2.52.0"
 _NODE_EXP_VER  = "1.8.1"
+_LOKI_VER      = "2.9.10"
+_PROMTAIL_VER  = "2.9.10"
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -44,11 +51,14 @@ def after_install():
     steps = [
         ("Directories",             lambda: _setup_directories()),
         ("Monitor Settings",        lambda: _configure_monitor_settings(server_ip, port)),
+        ("Register Local Server",   lambda: _register_local_server(server_ip)),
         ("Sample Load Test Configs",lambda: _create_sample_configs()),
         ("k6",                      lambda: _install_k6()),
         ("node_exporter",           lambda: _setup_node_exporter()),
         ("Prometheus",              lambda: _setup_prometheus(server_ip, port)),
         ("K6 Exporter",             lambda: _setup_k6_exporter(server_ip, port)),
+        ("Loki",                    lambda: _setup_loki()),
+        ("Promtail",                lambda: _setup_promtail()),
         ("Grafana",                 lambda: _setup_grafana(server_ip)),
     ]
 
@@ -75,6 +85,8 @@ def after_install():
     _log(f"  K6 Dashboard : http://{server_ip}:{port}/k6-monitor")
     _log(f"  Grafana      : http://{server_ip}:3000  (admin / admin)")
     _log(f"  Prometheus   : http://{server_ip}:9090")
+    _log(f"  Loki         : http://{server_ip}:3100")
+    _log(f"  Promtail     : http://{server_ip}:9080/metrics")
     _log("=" * 62)
 
 
@@ -84,10 +96,21 @@ def after_install():
 
 def _setup_directories():
     reports_dir = os.path.join(_APP_ROOT, "k6_tests", "reports")
-    for d in [reports_dir, _MON_DIR, _PROM_DIR, _NODE_DIR,
-              os.path.join(_PROM_DIR, "data")]:
+    for d in [
+        reports_dir, _MON_DIR, _PROM_DIR, _NODE_DIR,
+        os.path.join(_PROM_DIR, "data"),
+        _LOKI_DIR,
+        os.path.join(_LOKI_DIR, "chunks"),
+        os.path.join(_LOKI_DIR, "rules"),
+        os.path.join(_LOKI_DIR, "index"),
+        os.path.join(_LOKI_DIR, "index_cache"),
+        os.path.join(_LOKI_DIR, "compactor"),
+        _PROMTAIL_DIR,
+    ]:
         os.makedirs(d, exist_ok=True)
     _log(f"     reports → {reports_dir}")
+    _log(f"     loki    → {_LOKI_DIR}")
+    _log(f"     promtail→ {_PROMTAIL_DIR}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -106,9 +129,65 @@ def _configure_monitor_settings(server_ip, port):
     s.prometheus_enabled = 1
     s.prometheus_url   = f"http://{server_ip}:9090"
     s.refresh_interval = 5
+    try:
+        s.loki_enabled = 1
+        s.loki_url     = f"http://{server_ip}:3100"
+        s.promtail_url = f"http://{server_ip}:9080"
+    except Exception:
+        pass
     s.save(ignore_permissions=True)
     frappe.db.commit()
+    # Store Grafana password hint in site config for API auth during re-installs
+    try:
+        site_cfg_path = os.path.join(_BENCH_DIR, "sites", frappe.local.site, "site_config.json")
+        if os.path.isfile(site_cfg_path):
+            with open(site_cfg_path) as f:
+                site_cfg = json.load(f)
+            if "grafana_admin_password" not in site_cfg:
+                site_cfg["grafana_admin_password"] = "admin"
+                with open(site_cfg_path, "w") as f:
+                    json.dump(site_cfg, f, indent=1)
+    except Exception:
+        pass
     _log(f"     site={frappe.local.site}  base_url={s.base_url}")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Step 2b — Register localhost as a Remote Server record
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _register_local_server(server_ip):
+    """
+    Create (or update) a Remote Server record for this machine so that
+    Prometheus config is generated with proper server_name / env labels
+    and the multi-server overview dashboard shows the local server.
+    """
+    try:
+        if not frappe.db.exists("DocType", "Remote Server"):
+            return  # DocType not yet migrated
+        name = "local"
+        if frappe.db.exists("Remote Server", name):
+            doc = frappe.get_doc("Remote Server", name)
+        else:
+            doc = frappe.new_doc("Remote Server")
+            doc.server_name = name
+        doc.host                    = server_ip
+        doc.environment             = "Production"
+        doc.enabled                 = 1
+        doc.is_local                = 1
+        doc.tags                    = "local,frappe_k6"
+        doc.node_exporter_enabled   = 1
+        doc.node_exporter_port      = 9100
+        doc.redis_exporter_enabled  = 0   # using frappe_k6 exporter for Redis
+        doc.db_exporter_enabled     = 0   # using frappe_k6 exporter for DB
+        doc.promtail_enabled        = 1
+        doc.promtail_port           = 9080
+        doc.notes                   = "Auto-registered by frappe_k6 installer"
+        doc.save(ignore_permissions=True)
+        frappe.db.commit()
+        _log(f"     registered local Remote Server: {name}")
+    except Exception as exc:
+        _log(f"     _register_local_server skipped: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -292,7 +371,278 @@ WantedBy=multi-user.target
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Step 7 — Grafana
+#  Step 7 — Loki  (binary download, config, systemd service)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setup_loki():
+    binary = os.path.join(_LOKI_DIR, "loki")
+
+    if not os.path.isfile(binary):
+        _log(f"     downloading Loki v{_LOKI_VER} …")
+        url = (f"https://github.com/grafana/loki/releases/download/"
+               f"v{_LOKI_VER}/loki-linux-amd64.zip")
+        _download_zip_binary(url, _LOKI_DIR, "loki-linux-amd64", "loki")
+
+    cfg_path    = os.path.join(_LOKI_DIR, "loki-config.yaml")
+    chunks_dir  = os.path.join(_LOKI_DIR, "chunks")
+    rules_dir   = os.path.join(_LOKI_DIR, "rules")
+    loki_cfg = f"""auth_enabled: false
+
+server:
+  http_listen_port: 3100
+  grpc_listen_port: 9096
+  log_level: warn
+
+common:
+  path_prefix: {_LOKI_DIR}
+  storage:
+    filesystem:
+      chunks_directory: {chunks_dir}
+      rules_directory: {rules_dir}
+  replication_factor: 1
+  ring:
+    instance_addr: 127.0.0.1
+    kvstore:
+      store: inmemory
+
+schema_config:
+  configs:
+    - from: 2020-10-24
+      store: tsdb
+      object_store: filesystem
+      schema: v12
+      index:
+        prefix: index_
+        period: 24h
+
+limits_config:
+  reject_old_samples: true
+  reject_old_samples_max_age: 168h
+  ingestion_rate_mb: 8
+  ingestion_burst_size_mb: 16
+
+analytics:
+  reporting_enabled: false
+"""
+    with open(cfg_path, "w") as f:
+        f.write(loki_cfg)
+
+    svc_name = "loki"
+    if not _service_active(svc_name):
+        user = os.environ.get("USER", "erpadmin")
+        svc_content = f"""[Unit]
+Description=Grafana Loki Log Aggregation
+After=network.target
+
+[Service]
+User={user}
+ExecStart={binary} -config.file={cfg_path}
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+"""
+        _install_systemd_service(svc_name, svc_content)
+    else:
+        _log("     loki already active — config updated, service left running")
+
+    _log(f"     loki: {_service_status(svc_name)}  (http://localhost:3100/ready)")
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Step 8 — Promtail  (binary download, config, systemd service)
+# ─────────────────────────────────────────────────────────────────────────────
+
+def _setup_promtail():
+    binary = os.path.join(_PROMTAIL_DIR, "promtail")
+
+    if not os.path.isfile(binary):
+        _log(f"     downloading Promtail v{_PROMTAIL_VER} …")
+        url = (f"https://github.com/grafana/loki/releases/download/"
+               f"v{_PROMTAIL_VER}/promtail-linux-amd64.zip")
+        _download_zip_binary(url, _PROMTAIL_DIR, "promtail-linux-amd64", "promtail")
+
+    positions_path = os.path.join(_PROMTAIL_DIR, "positions.yaml")
+    cfg_path       = os.path.join(_PROMTAIL_DIR, "promtail-config.yaml")
+
+    scrape_yaml = _build_promtail_scrape_configs()
+
+    promtail_cfg = f"""server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+  log_level: warn
+
+positions:
+  filename: {positions_path}
+
+clients:
+  - url: http://localhost:3100/loki/api/v1/push
+
+{scrape_yaml}
+"""
+    with open(cfg_path, "w") as f:
+        f.write(promtail_cfg)
+
+    svc_name = "promtail"
+    if not _service_active(svc_name):
+        user = os.environ.get("USER", "erpadmin")
+        svc_content = f"""[Unit]
+Description=Grafana Promtail Log Collector
+After=network.target loki.service
+
+[Service]
+User={user}
+ExecStart={binary} -config.file={cfg_path}
+Restart=on-failure
+RestartSec=5s
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target
+"""
+        _install_systemd_service(svc_name, svc_content)
+    else:
+        _log("     promtail already active — config updated, service left running")
+
+    _log(f"     promtail: {_service_status(svc_name)}  (http://localhost:9080/metrics)")
+
+
+def _build_promtail_scrape_configs():
+    """
+    Build promtail scrape_configs YAML.
+    Covers all Frappe/bench log files + optional system logs.
+    Only includes paths that are readable by the current user.
+    """
+    bench_logs = os.path.join(_BENCH_DIR, "logs")
+
+    level_pipeline = (
+        "    pipeline_stages:\n"
+        "      - regex:\n"
+        "          expression: '.*(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL).*'\n"
+        "      - labels:\n"
+        "          level:\n"
+    )
+
+    def job_block(job_name, path, labels, pipeline="", check_path=None):
+        """Return a scrape_config block if the path is accessible."""
+        check = check_path or path
+        # For glob paths, check the directory
+        check_dir = os.path.dirname(check) if "*" not in check else os.path.dirname(check)
+        if not os.access(check_dir, os.R_OK):
+            return None
+        label_lines = "".join(f"\n          {k}: {v}" for k, v in labels.items())
+        label_lines += f"\n          __path__: {path}"
+        block = (
+            f"  - job_name: {job_name}\n"
+            f"    static_configs:\n"
+            f"      - targets:\n"
+            f"          - localhost\n"
+            f"        labels:{label_lines}\n"
+        )
+        if pipeline:
+            block += pipeline
+        return block
+
+    blocks = []
+
+    # ── Frappe application log ────────────────────────────────────
+    b = job_block("frappe_app",
+                  os.path.join(bench_logs, "frappe.log"),
+                  {"job": "frappe", "log_type": "application", "app": "frappe_k6", "env": "production"},
+                  level_pipeline, bench_logs)
+    if b: blocks.append(b)
+
+    # ── Bench / Gunicorn log ──────────────────────────────────────
+    b = job_block("frappe_bench",
+                  os.path.join(bench_logs, "bench.log"),
+                  {"job": "frappe", "log_type": "bench", "app": "frappe_k6"},
+                  level_pipeline, bench_logs)
+    if b: blocks.append(b)
+
+    # ── Scheduler log ─────────────────────────────────────────────
+    b = job_block("frappe_scheduler",
+                  os.path.join(bench_logs, "scheduler.log"),
+                  {"job": "frappe", "log_type": "scheduler", "app": "frappe_k6"},
+                  level_pipeline, bench_logs)
+    if b: blocks.append(b)
+
+    # ── Worker log ────────────────────────────────────────────────
+    b = job_block("frappe_worker",
+                  os.path.join(bench_logs, "worker.log"),
+                  {"job": "frappe", "log_type": "worker", "app": "frappe_k6"},
+                  level_pipeline, bench_logs)
+    if b: blocks.append(b)
+
+    # ── Worker error log ──────────────────────────────────────────
+    b = job_block("frappe_worker_error",
+                  os.path.join(bench_logs, "worker.error.log"),
+                  {"job": "frappe", "log_type": "worker_error", "level": "ERROR", "app": "frappe_k6"},
+                  "", bench_logs)
+    if b: blocks.append(b)
+
+    # ── Database / slow query log ─────────────────────────────────
+    b = job_block("frappe_database",
+                  os.path.join(bench_logs, "database.log"),
+                  {"job": "frappe", "log_type": "database", "app": "frappe_k6"},
+                  level_pipeline, bench_logs)
+    if b: blocks.append(b)
+
+    # ── Optional: Nginx ───────────────────────────────────────────
+    b = job_block("nginx",
+                  "/var/log/nginx/access.log",
+                  {"job": "nginx", "log_type": "access"},
+                  "", "/var/log/nginx")
+    if b: blocks.append(b)
+
+    # ── Optional: MySQL ───────────────────────────────────────────
+    b = job_block("mysql",
+                  "/var/log/mysql/error.log",
+                  {"job": "mysql", "log_type": "database"},
+                  "", "/var/log/mysql")
+    if b: blocks.append(b)
+
+    # ── Optional: PostgreSQL ──────────────────────────────────────
+    for pg_log in ("/var/log/postgresql/postgresql-14-main.log",
+                   "/var/log/postgresql/postgresql-15-main.log",
+                   "/var/log/postgresql/postgresql-16-main.log"):
+        if os.access(pg_log, os.R_OK):
+            b = job_block("postgresql", pg_log,
+                          {"job": "postgresql", "log_type": "database"},
+                          "", os.path.dirname(pg_log))
+            if b:
+                blocks.append(b)
+                break
+
+    # ── Syslog ────────────────────────────────────────────────────
+    b = job_block("syslog",
+                  "/var/log/syslog",
+                  {"job": "syslog", "log_type": "system"},
+                  "", "/var/log")
+    if b: blocks.append(b)
+
+    # Fallback: if bench_logs dir doesn't exist yet, add a placeholder
+    if not blocks:
+        blocks.append(
+            f"  - job_name: frappe_app\n"
+            f"    static_configs:\n"
+            f"      - targets:\n"
+            f"          - localhost\n"
+            f"        labels:\n"
+            f"          job: frappe\n"
+            f"          log_type: application\n"
+            f"          app: frappe_k6\n"
+            f"          __path__: {bench_logs}/frappe.log\n"
+        )
+
+    return "scrape_configs:\n\n" + "\n".join(b for b in blocks if b)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Step 9 — Grafana
 # ─────────────────────────────────────────────────────────────────────────────
 
 def _setup_grafana(server_ip):
@@ -328,11 +678,14 @@ def _setup_grafana(server_ip):
     # Import dashboard via Grafana API (waits up to 20 s for Grafana to start)
     _import_dashboard_via_api()
 
+    # Ensure Prometheus + Loki datasources exist via API (works on all Grafana versions)
+    _ensure_grafana_datasources_via_api()
+
     _log(f"     grafana: {_service_status(svc_name)}")
 
 
 def _provision_grafana_datasource(server_ip):
-    """Write Prometheus datasource YAML to Grafana provisioning dir."""
+    """Write Prometheus + Loki datasource YAML to Grafana provisioning dir."""
     ds_dir = "/etc/grafana/provisioning/datasources"
     ds_yaml = f"""apiVersion: 1
 datasources:
@@ -343,8 +696,22 @@ datasources:
     access: proxy
     isDefault: true
     editable: true
+
+  - name: Loki
+    type: loki
+    uid: loki
+    url: http://localhost:3100
+    access: proxy
+    isDefault: false
+    editable: true
+    jsonData:
+      maxLines: 1000
+      derivedFields:
+        - name: TraceID
+          matcherRegex: "traceID=(\\\\w+)"
+          url: ""
 """
-    dst = os.path.join(ds_dir, "frappe_k6_prometheus.yaml")
+    dst = os.path.join(ds_dir, "frappe_k6_datasources.yaml")
     _write_with_sudo(ds_yaml, dst)
 
 
@@ -366,23 +733,66 @@ providers:
     # Dashboard JSON directory
     _run_sudo(["mkdir", "-p", "/var/lib/grafana/dashboards"])
 
-    dashboard_src = os.path.join(_SETUP_DIR, "frappe_k6_dashboard.json")
-    if os.path.isfile(dashboard_src):
-        _run_sudo(["cp", dashboard_src, "/var/lib/grafana/dashboards/frappe_k6.json"])
-        _run_sudo(["chown", "grafana:grafana",
-                   "/var/lib/grafana/dashboards/frappe_k6.json"])
+    # Regenerate dashboards from gen_dashboards.py if available
+    gen_script = os.path.join(_SETUP_DIR, "gen_dashboards.py")
+    if os.path.isfile(gen_script):
+        try:
+            import subprocess
+            subprocess.run([sys.executable, gen_script], check=True, timeout=30)
+            _log("     dashboards regenerated via gen_dashboards.py")
+        except Exception as exc:
+            _log(f"     gen_dashboards.py skipped: {exc}")
+
+    # Copy all dashboard JSON files
+    _dashboard_files = [
+        "frappe_k6_dashboard.json",
+        "frappe_k6_remote_server_dashboard.json",
+        "frappe_k6_multi_dashboard.json",
+        "frappe_k6_db_dashboard.json",
+        "frappe_k6_redis_dashboard.json",
+        "frappe_k6_worker_dashboard.json",
+        "frappe_k6_node_dashboard.json",
+    ]
+    for fname in _dashboard_files:
+        src = os.path.join(_SETUP_DIR, fname)
+        dst = f"/var/lib/grafana/dashboards/{fname}"
+        if os.path.isfile(src):
+            _run_sudo(["cp", src, dst])
+            _run_sudo(["chown", "grafana:grafana", dst])
+
+    # Trigger Grafana to reload provisioned dashboards (non-destructive)
+    try:
+        import urllib.request as ur, base64
+        auth = _grafana_auth_header()
+        if auth:
+            req = ur.Request("http://localhost:3000/api/admin/provisioning/dashboards/reload",
+                             data=b"", headers={"Authorization": auth}, method="POST")
+            ur.urlopen(req, timeout=5)
+    except Exception:
+        pass
 
 
 def _import_dashboard_via_api():
-    """Wait for Grafana to be ready, then import the dashboard JSON via API."""
+    """Wait for Grafana to be ready, then import all dashboard JSON files via API."""
     import time
     import urllib.request as ur
     import urllib.error
     import base64
 
-    dashboard_src = os.path.join(_SETUP_DIR, "frappe_k6_dashboard.json")
-    if not os.path.isfile(dashboard_src):
+    _all_dashboards = [
+        "frappe_k6_dashboard.json",
+        "frappe_k6_remote_server_dashboard.json",
+        "frappe_k6_multi_dashboard.json",
+        "frappe_k6_db_dashboard.json",
+        "frappe_k6_redis_dashboard.json",
+        "frappe_k6_worker_dashboard.json",
+        "frappe_k6_node_dashboard.json",
+    ]
+    dashboard_files = [os.path.join(_SETUP_DIR, f) for f in _all_dashboards
+                       if os.path.isfile(os.path.join(_SETUP_DIR, f))]
+    if not dashboard_files:
         return
+    dashboard_src = dashboard_files[0]  # used below for auth check
 
     grafana_url = "http://localhost:3000"
     # Try default password first, then common changed passwords
@@ -410,27 +820,130 @@ def _import_dashboard_via_api():
         except Exception:
             time.sleep(2)
 
-    with open(dashboard_src) as f:
-        dashboard = json.load(f)
+    for dash_path in dashboard_files:
+        try:
+            with open(dash_path) as f:
+                dashboard = json.load(f)
+            payload = json.dumps({
+                "dashboard": dashboard,
+                "overwrite": True,
+                "folderId": 0,
+            }).encode()
+            req = ur.Request(
+                f"{grafana_url}/api/dashboards/db",
+                data=payload,
+                headers=headers,
+                method="POST",
+            )
+            with ur.urlopen(req, timeout=10) as r:
+                result = json.loads(r.read())
+                _log(f"     dashboard imported: {result.get('url', os.path.basename(dash_path))}")
+        except Exception as exc:
+            _log(f"     dashboard {os.path.basename(dash_path)} import skipped: {exc}")
 
-    payload = json.dumps({
-        "dashboard": dashboard,
-        "overwrite": True,
-        "folderId": 0,
-    }).encode()
 
+def _grafana_auth_header():
+    """
+    Return a Basic-auth header value for the Grafana admin user.
+    Tries the site config password, then a list of common defaults.
+    Returns None if Grafana is unreachable.
+    """
+    import base64
+    import urllib.request as ur
+
+    grafana_url = "http://localhost:3000"
+    # Try passwords from site config first, then common defaults
+    stored = frappe.conf.get("grafana_admin_password", "")
+    candidates = ([stored] if stored else []) + [
+        "admin", "Admin@123", "admin123", "grafana",
+        "Avinash@77632", "Admin@k6",
+    ]
+    for pwd in candidates:
+        creds = base64.b64encode(f"admin:{pwd}".encode()).decode()
+        auth  = f"Basic {creds}"
+        try:
+            req = ur.Request(f"{grafana_url}/api/org",
+                             headers={"Authorization": auth})
+            with ur.urlopen(req, timeout=4) as r:
+                if r.status == 200:
+                    return auth
+        except Exception:
+            continue
+    return None
+
+
+def _ensure_grafana_datasources_via_api():
+    """
+    Create Prometheus and Loki datasources in Grafana via the REST API
+    if they do not already exist.  Works on Grafana 9, 10, 11, 12.
+    """
+    import base64
+    import urllib.request as ur
+    import urllib.error
+
+    grafana_url = "http://localhost:3000"
+    auth = _grafana_auth_header()
+    if not auth:
+        _log("     ⚠ could not authenticate to Grafana — datasources skipped")
+        return
+
+    base_headers = {
+        "Authorization": auth,
+        "Content-Type": "application/json",
+    }
+
+    # Fetch existing datasource names
     try:
-        req = ur.Request(
-            f"{grafana_url}/api/dashboards/db",
-            data=payload,
-            headers=headers,
-            method="POST",
-        )
-        with ur.urlopen(req, timeout=10) as r:
-            result = json.loads(r.read())
-            _log(f"     dashboard imported: {result.get('url', 'ok')}")
+        req = ur.Request(f"{grafana_url}/api/datasources", headers=base_headers)
+        with ur.urlopen(req, timeout=6) as r:
+            existing = {d["type"] + ":" + d["name"]: d["id"]
+                        for d in json.loads(r.read())}
     except Exception as exc:
-        _log(f"     dashboard API import skipped: {exc}")
+        _log(f"     ⚠ could not list Grafana datasources: {exc}")
+        return
+
+    desired = [
+        {
+            "name": "Prometheus",
+            "type": "prometheus",
+            "uid":  "prometheus",
+            "url":  "http://localhost:9090",
+            "access": "proxy",
+            "isDefault": True,
+            "jsonData": {"timeInterval": "15s"},
+        },
+        {
+            "name": "Loki",
+            "type": "loki",
+            "uid":  "loki",
+            "url":  "http://localhost:3100",
+            "access": "proxy",
+            "isDefault": False,
+            "jsonData": {"maxLines": 1000},
+        },
+    ]
+
+    for ds in desired:
+        key = ds["type"] + ":" + ds["name"]
+        if key in existing:
+            _log(f"     datasource '{ds['name']}' already exists — skipping")
+            continue
+        payload = json.dumps(ds).encode()
+        try:
+            req = ur.Request(
+                f"{grafana_url}/api/datasources",
+                data=payload,
+                headers=base_headers,
+                method="POST",
+            )
+            with ur.urlopen(req, timeout=8) as r:
+                result = json.loads(r.read())
+                _log(f"     datasource '{ds['name']}' created: id={result.get('id','?')}")
+        except urllib.error.HTTPError as exc:
+            body = exc.read().decode(errors="replace")
+            _log(f"     datasource '{ds['name']}' error {exc.code}: {body[:120]}")
+        except Exception as exc:
+            _log(f"     datasource '{ds['name']}' failed: {exc}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -518,3 +1031,27 @@ def _service_active(name):
 def _service_status(name):
     _, out, _ = _run_cmd(["systemctl", "is-active", name])
     return out.strip() or "unknown"
+
+
+def _download_zip_binary(url, dest_dir, zip_entry_name, short_name):
+    """Download a .zip archive and extract a single binary, rename to short_name."""
+    tmp = os.path.join("/tmp", os.path.basename(url))
+    if not os.path.isfile(tmp):
+        _log(f"     fetching {url} …")
+        urllib.request.urlretrieve(url, tmp)
+    with zipfile.ZipFile(tmp, "r") as zf:
+        # zip_entry_name is the name inside the archive (may or may not have extension)
+        names = zf.namelist()
+        match = next((n for n in names if os.path.basename(n) == zip_entry_name
+                      or n == zip_entry_name), None)
+        if match is None:
+            # Try without suffix
+            match = next((n for n in names if n.startswith(zip_entry_name)), None)
+        if match is None:
+            raise RuntimeError(f"Binary '{zip_entry_name}' not found in zip. Contents: {names}")
+        data = zf.read(match)
+    dest = os.path.join(dest_dir, short_name)
+    with open(dest, "wb") as f:
+        f.write(data)
+    os.chmod(dest, 0o755)
+    _log(f"     extracted {short_name} → {dest}")

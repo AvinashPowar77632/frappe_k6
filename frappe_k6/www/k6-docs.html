@@ -1,0 +1,769 @@
+{% extends "templates/web.html" %}
+{% block title %}Frappe K6 — User Manual{% endblock %}
+{% block no_sidebar %}1{% endblock %}
+{% block head_include %}
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>
+:root{--bg:#0d0d0d;--surface:#111827;--border:#1f2937;--text:#e2e8f0;--muted:#9ca3af;--accent:#f97316;--blue:#3b82f6;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--purple:#a855f7}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg)!important;color:var(--text)!important;font-family:'Inter',system-ui,sans-serif;font-size:14px;line-height:1.6}
+.web-header,.navbar,footer.web-footer{display:none!important}
+.container{max-width:100%!important;padding:0!important}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
+code{background:#1e293b;color:#f59e0b;padding:2px 6px;border-radius:4px;font-size:12px;font-family:monospace}
+pre{background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:14px;overflow-x:auto;position:relative;margin:10px 0}
+pre code{background:none;padding:0;color:#a5f3fc;font-size:12px}
+.copy-btn{position:absolute;top:8px;right:8px;background:#374151;color:#9ca3af;border:none;border-radius:4px;padding:3px 8px;font-size:11px;cursor:pointer}
+.copy-btn:hover{background:#4b5563;color:#fff}
+h1{font-size:22px;font-weight:700;color:#fff;margin-bottom:6px}
+h2{font-size:18px;font-weight:700;color:#fff;margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+h3{font-size:15px;font-weight:600;color:var(--accent);margin:16px 0 8px}
+h4{font-size:13px;font-weight:600;color:var(--muted);margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+p{margin-bottom:10px;color:#cbd5e1}
+ul,ol{padding-left:20px;margin-bottom:10px;color:#cbd5e1}
+li{margin-bottom:4px}
+table{width:100%;border-collapse:collapse;margin:10px 0;font-size:13px}
+th{background:#1e293b;color:var(--text);padding:8px 12px;text-align:left;border:1px solid var(--border)}
+td{padding:8px 12px;border:1px solid var(--border);vertical-align:top}
+tr:nth-child(even){background:#0f172a}
+.badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:600}
+.badge-green{background:#14532d;color:#86efac}.badge-yellow{background:#713f12;color:#fde68a}
+.badge-red{background:#7f1d1d;color:#fca5a5}.badge-blue{background:#1e3a5f;color:#93c5fd}
+.badge-purple{background:#3b1f5e;color:#d8b4fe}
+.callout{border-radius:8px;padding:12px 16px;margin:12px 0;border-left:4px solid}
+.callout-tip{background:#0f2a1e;border-color:var(--green)}.callout-tip::before{content:"💡 Tip — ";font-weight:700;color:var(--green)}
+.callout-warn{background:#2a1f0f;border-color:var(--yellow)}.callout-warn::before{content:"⚠️ Warning — ";font-weight:700;color:var(--yellow)}
+.callout-info{background:#0f1f2a;border-color:var(--blue)}.callout-info::before{content:"ℹ️ Note — ";font-weight:700;color:var(--blue)}
+.callout-danger{background:#2a0f0f;border-color:var(--red)}.callout-danger::before{content:"🔴 Critical — ";font-weight:700;color:var(--red)}
+/* Layout */
+.docs-topbar{display:flex;align-items:center;justify-content:space-between;background:var(--surface);border-bottom:1px solid var(--border);padding:10px 20px;position:sticky;top:0;z-index:200}
+.docs-brand{display:flex;align-items:center;gap:10px}
+.docs-logo{font-size:22px}
+.docs-title{font-size:17px;font-weight:700;color:var(--accent)}
+.docs-nav-btns{display:flex;gap:8px}
+.nav-btn{padding:5px 14px;border-radius:6px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--muted);transition:all .2s;text-decoration:none;display:inline-flex;align-items:center;gap:5px}
+.nav-btn:hover{background:#1f2937;color:#fff;text-decoration:none}
+.nav-btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.nav-btn.primary:hover{background:#ea7000}
+.docs-layout{display:flex;min-height:calc(100vh - 48px)}
+.docs-sidebar{width:240px;flex-shrink:0;background:#0a0f1a;border-right:1px solid var(--border);position:sticky;top:48px;height:calc(100vh - 48px);overflow-y:auto;padding:16px 0}
+.sidebar-section{padding:4px 16px;font-size:11px;font-weight:700;color:#4b5563;text-transform:uppercase;letter-spacing:.8px;margin-top:12px}
+.sidebar-link{display:block;padding:6px 16px;color:var(--muted);font-size:13px;cursor:pointer;transition:all .15s;border-left:3px solid transparent}
+.sidebar-link:hover{color:#fff;background:#111827}
+.sidebar-link.active{color:var(--accent);background:#1a0f02;border-left-color:var(--accent);font-weight:600}
+.docs-content{flex:1;padding:32px 40px;max-width:900px;overflow-x:hidden}
+.section{display:none}.section.active{display:block}
+/* Cards */
+.cards-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin:12px 0}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.card-icon{font-size:24px;margin-bottom:8px}
+.card-title{font-size:13px;font-weight:700;color:#fff;margin-bottom:4px}
+.card-desc{font-size:12px;color:var(--muted)}
+.metric-table td:nth-child(3){font-family:monospace}
+.thresh-green{color:var(--green);font-weight:600}.thresh-yellow{color:var(--yellow);font-weight:600}.thresh-red{color:var(--red);font-weight:600}
+.step{display:flex;gap:14px;margin-bottom:16px;align-items:flex-start}
+.step-num{background:var(--accent);color:#fff;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;margin-top:2px}
+.step-body{flex:1}
+.step-title{font-weight:600;color:#fff;margin-bottom:4px}
+.port-row{display:flex;gap:8px;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)}
+.port-num{font-family:monospace;color:var(--blue);font-weight:700;width:60px}
+.port-svc{color:#fff;width:150px;font-weight:600}
+.port-desc{color:var(--muted);font-size:12px}
+.search-box{background:#1e293b;border:1px solid var(--border);border-radius:8px;padding:8px 14px;color:var(--text);font-size:13px;width:100%;margin-bottom:20px;outline:none}
+.search-box:focus{border-color:var(--accent)}
+</style>
+{% endblock %}
+{% block page_content %}
+<div class="docs-topbar">
+  <div class="docs-brand">
+    <span class="docs-logo">⚡</span>
+    <span class="docs-title">Frappe K6 — User Manual</span>
+  </div>
+  <div class="docs-nav-btns">
+    <a href="/k6-monitor" class="nav-btn">📊 Monitor</a>
+    <a href="{{ grafana_url }}" target="_blank" class="nav-btn">📈 Grafana</a>
+    <a href="{{ prometheus_url }}" target="_blank" class="nav-btn">🔥 Prometheus</a>
+    <a href="/app/monitor-settings" class="nav-btn primary">⚙️ Settings</a>
+  </div>
+</div>
+<div class="docs-layout">
+  <!-- SIDEBAR -->
+  <nav class="docs-sidebar" id="sidebar">
+    <input class="search-box" id="searchBox" placeholder="🔍 Search…" oninput="filterNav(this.value)">
+    <div class="sidebar-section">Getting Started</div>
+    <a class="sidebar-link active" onclick="show('overview')" data-label="Overview">📌 Overview</a>
+    <a class="sidebar-link" onclick="show('install')" data-label="Installation">🚀 Installation</a>
+    <a class="sidebar-link" onclick="show('config')" data-label="Configuration">⚙️ Configuration</a>
+    <div class="sidebar-section">Dashboards</div>
+    <a class="sidebar-link" onclick="show('dashboards')" data-label="Dashboards Guide">📊 Dashboards Guide</a>
+    <a class="sidebar-link" onclick="show('reading')" data-label="Reading Metrics">📖 Reading Metrics</a>
+    <div class="sidebar-section">Usage</div>
+    <a class="sidebar-link" onclick="show('loadtest')" data-label="Load Testing">🔫 Load Testing</a>
+    <a class="sidebar-link" onclick="show('remote')" data-label="Remote Servers">🌐 Remote Servers</a>
+    <div class="sidebar-section">Reference</div>
+    <a class="sidebar-link" onclick="show('troubleshoot')" data-label="Troubleshooting">🔧 Troubleshooting</a>
+    <a class="sidebar-link" onclick="show('bestpractices')" data-label="Best Practices">✅ Best Practices</a>
+  </nav>
+  <!-- MAIN CONTENT -->
+  <main class="docs-content">
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 1: OVERVIEW -->
+    <div class="section active" id="sec-overview">
+      <h1>📌 Frappe K6 — Overview</h1>
+      <p>A complete <strong>performance monitoring & load testing</strong> solution built into Frappe/ERPNext. Combines K6 load testing, Prometheus metrics, Grafana dashboards, and Loki log aggregation in a single app.</p>
+      <div class="cards-grid">
+        <div class="card"><div class="card-icon">🔫</div><div class="card-title">Load Testing</div><div class="card-desc">Run Smoke, Load, Stress, Spike & Soak tests against any API endpoint</div></div>
+        <div class="card"><div class="card-icon">📊</div><div class="card-title">7 Dashboards</div><div class="card-desc">Expert Grafana dashboards for every layer of the stack</div></div>
+        <div class="card"><div class="card-icon">🌐</div><div class="card-title">Remote Servers</div><div class="card-desc">Monitor multiple remote servers with node_exporter</div></div>
+        <div class="card"><div class="card-icon">📜</div><div class="card-title">Log Aggregation</div><div class="card-desc">Loki + Promtail collect all Frappe, scheduler, worker & system logs</div></div>
+        <div class="card"><div class="card-icon">🔔</div><div class="card-title">Real-time Alerts</div><div class="card-desc">Threshold-based colour coding on every gauge and stat panel</div></div>
+        <div class="card"><div class="card-icon">🤖</div><div class="card-title">Auto-provisioned</div><div class="card-desc">One-command install — services, datasources & dashboards created automatically</div></div>
+      </div>
+      <h2>🏗️ Architecture</h2>
+      <pre><code>Browser / ERPNext
+    │
+    ├─ /k6-monitor  ──→  K6 Load Runner  ──→  Prometheus (metrics)
+    ├─ /k6-docs     ──→  This manual                  │
+    │                                          node_exporter (9100)
+    │                                          redis_exporter (9121)
+    │                                          mysqld_exporter (9104)
+    │                                          frappe_k6_exporter (9200)
+    │                                                 │
+    │                                         Prometheus (9090)
+    │                                                 │
+    Promtail ──→ Loki (3100) ─────────────→ Grafana (3000)
+                                              7 Expert Dashboards</code></pre>
+      <h2>🧩 Components</h2>
+      <table>
+        <tr><th>Component</th><th>Port</th><th>Purpose</th></tr>
+        <tr><td><strong>K6</strong></td><td>—</td><td>Open-source load testing engine (runs test scripts)</td></tr>
+        <tr><td><strong>Prometheus</strong></td><td>9090</td><td>Time-series metrics database — scrapes all exporters</td></tr>
+        <tr><td><strong>Grafana</strong></td><td>3000</td><td>Dashboards & visualisation — reads from Prometheus + Loki</td></tr>
+        <tr><td><strong>Loki</strong></td><td>3100</td><td>Log aggregation database (like Prometheus, but for logs)</td></tr>
+        <tr><td><strong>Promtail</strong></td><td>9080</td><td>Log collector agent — tails files and ships to Loki</td></tr>
+        <tr><td><strong>node_exporter</strong></td><td>9100</td><td>OS metrics: CPU, RAM, disk, network, processes</td></tr>
+        <tr><td><strong>redis_exporter</strong></td><td>9121</td><td>Redis metrics: memory, commands/s, keyspace</td></tr>
+        <tr><td><strong>mysqld_exporter</strong></td><td>9104</td><td>MariaDB/MySQL metrics: queries, connections, InnoDB</td></tr>
+        <tr><td><strong>frappe_k6_exporter</strong></td><td>9200</td><td>Custom Frappe metrics: active users, jobs, scheduler</td></tr>
+      </table>
+      <h2>✅ Supported Environments</h2>
+      <ul>
+        <li>Ubuntu 20.04 / 22.04 LTS (recommended)</li>
+        <li>Frappe Framework v14, v15, v16</li>
+        <li>ERPNext v14, v15, v16</li>
+        <li>MariaDB 10.6+ or MySQL 8+</li>
+        <li>Redis 6+</li>
+        <li>Python 3.10+</li>
+      </ul>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 2: INSTALL -->
+    <div class="section" id="sec-install">
+      <h1>🚀 Installation Guide</h1>
+      <h2>📋 Prerequisites</h2>
+      <table>
+        <tr><th>Requirement</th><th>Minimum</th><th>Check Command</th></tr>
+        <tr><td>OS</td><td>Ubuntu 20.04+</td><td><code>lsb_release -a</code></td></tr>
+        <tr><td>Python</td><td>3.10+</td><td><code>python3 --version</code></td></tr>
+        <tr><td>Frappe Bench</td><td>5.x+</td><td><code>bench --version</code></td></tr>
+        <tr><td>RAM</td><td>2 GB free</td><td><code>free -h</code></td></tr>
+        <tr><td>Disk</td><td>5 GB free</td><td><code>df -h</code></td></tr>
+        <tr><td>Ports free</td><td>3000, 3100, 9090, 9100, 9200</td><td><code>ss -tlnp</code></td></tr>
+        <tr><td>sudo access</td><td>Required for systemd services</td><td><code>sudo -l</code></td></tr>
+      </table>
+      <h2>⚡ Install (One Command)</h2>
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-body">
+          <div class="step-title">Get the app</div>
+          <pre><code id="c-get">bench get-app https://github.com/your-org/frappe_k6</code><button class="copy-btn" onclick="cp('c-get')">Copy</button></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-body">
+          <div class="step-title">Install on your site</div>
+          <pre><code id="c-install">bench --site your-site.local install-app frappe_k6</code><button class="copy-btn" onclick="cp('c-install')">Copy</button></pre>
+          <p>This single command installs K6, Prometheus, Grafana, Loki, Promtail, all exporters, creates systemd services, provisions datasources, and imports all dashboards automatically.</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-body">
+          <div class="step-title">Verify services are running</div>
+          <pre><code id="c-verify">systemctl status prometheus grafana-server loki promtail node_exporter frappe-k6-exporter redis_exporter</code><button class="copy-btn" onclick="cp('c-verify')">Copy</button></pre>
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-num">4</div>
+        <div class="step-body">
+          <div class="step-title">Open Grafana</div>
+          <p>Go to <a href="{{ grafana_url }}" target="_blank">{{ grafana_url }}</a> — default login: <code>admin / admin</code> (change on first login)</p>
+        </div>
+      </div>
+      <h2>🔌 Required Ports (Firewall)</h2>
+      <div class="port-row"><span class="port-num">3000</span><span class="port-svc">Grafana</span><span class="port-desc">Web dashboard UI</span></div>
+      <div class="port-row"><span class="port-num">9090</span><span class="port-svc">Prometheus</span><span class="port-desc">Metrics API &amp; web UI</span></div>
+      <div class="port-row"><span class="port-num">3100</span><span class="port-svc">Loki</span><span class="port-desc">Log ingestion &amp; query</span></div>
+      <div class="port-row"><span class="port-num">9080</span><span class="port-svc">Promtail</span><span class="port-desc">Status page (internal)</span></div>
+      <div class="port-row"><span class="port-num">9100</span><span class="port-svc">node_exporter</span><span class="port-desc">OS metrics — open on remote servers too</span></div>
+      <div class="port-row"><span class="port-num">9121</span><span class="port-svc">redis_exporter</span><span class="port-desc">Redis metrics</span></div>
+      <div class="port-row"><span class="port-num">9104</span><span class="port-svc">mysqld_exporter</span><span class="port-desc">Database metrics</span></div>
+      <div class="port-row"><span class="port-num">9200</span><span class="port-svc">frappe_k6_exporter</span><span class="port-desc">Frappe custom metrics</span></div>
+      <div class="callout callout-info">For remote servers, open port <code>9100</code> inbound from the Prometheus server IP only. Never expose Prometheus (9090) to the internet.</div>
+      <h2>🔍 Post-install Checks</h2>
+      <pre><code id="c-checks"># All exporters responding?
+curl -s http://localhost:9100/metrics | head -5   # node_exporter
+curl -s http://localhost:9200/metrics | head -5   # frappe_k6
+curl -s http://localhost:9121/metrics | head -5   # redis
+
+# Prometheus scraping?
+curl -s 'http://localhost:9090/api/v1/targets' | python3 -m json.tool | grep '"health"'
+
+# Grafana alive?
+curl -s http://localhost:3000/api/health</code><button class="copy-btn" onclick="cp('c-checks')">Copy</button></pre>
+      <h2>⚠️ Common Installation Issues</h2>
+      <table>
+        <tr><th>Error</th><th>Cause</th><th>Fix</th></tr>
+        <tr><td>Port already in use</td><td>Another service on same port</td><td><code>ss -tlnp | grep 3000</code> then stop conflicting service</td></tr>
+        <tr><td>Grafana not starting</td><td>Permission on /var/lib/grafana</td><td><code>sudo chown -R grafana:grafana /var/lib/grafana</code></td></tr>
+        <tr><td>No metrics in Prometheus</td><td>Firewall blocking exporter</td><td>Check <code>ufw allow 9100</code> and curl the exporter URL</td></tr>
+        <tr><td>Dashboard shows "No Data"</td><td>Wrong datasource UID</td><td>Go to Grafana → Datasources → verify Prometheus UID = <code>prometheus</code></td></tr>
+        <tr><td>K6 not found</td><td>Binary not in PATH</td><td><code>which k6</code> — re-run install or check <code>/home/erpadmin/monitoring/k6/</code></td></tr>
+      </table>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 3: CONFIG -->
+    <div class="section" id="sec-config">
+      <h1>⚙️ Configuration Guide</h1>
+      <h2>🖥️ Monitor Settings <small style="font-size:12px;color:var(--muted)">(Frappe → Monitor Settings)</small></h2>
+      <table>
+        <tr><th>Field</th><th>Purpose</th><th>Default</th><th>Example</th></tr>
+        <tr><td><code>grafana_url</code></td><td>Grafana web UI URL shown in buttons and links</td><td>http://localhost:3000</td><td>http://192.168.1.10:3000</td></tr>
+        <tr><td><code>prometheus_url</code></td><td>Prometheus API URL for live metric queries</td><td>http://localhost:9090</td><td>http://192.168.1.10:9090</td></tr>
+        <tr><td><code>loki_url</code></td><td>Loki query URL (used by Grafana datasource)</td><td>http://localhost:3100</td><td>http://192.168.1.10:3100</td></tr>
+        <tr><td><code>grafana_admin_password</code></td><td>Admin password for API-based provisioning</td><td>admin</td><td>MySecurePass123</td></tr>
+        <tr><td><code>refresh_interval</code></td><td>K6 Monitor page auto-refresh (seconds)</td><td>5</td><td>10</td></tr>
+        <tr><td><code>loki_enabled</code></td><td>Enable Loki log datasource in Grafana</td><td>checked</td><td>—</td></tr>
+      </table>
+      <h2>🌐 Remote Server Configuration <small style="font-size:12px;color:var(--muted)">(Frappe → Remote Server)</small></h2>
+      <table>
+        <tr><th>Field</th><th>Purpose</th><th>Example</th></tr>
+        <tr><td><code>server_name</code></td><td>Unique label used in Prometheus &amp; Grafana filters</td><td>prod-server-1</td></tr>
+        <tr><td><code>ip_address</code></td><td>IP or hostname of the remote server</td><td>192.168.1.50</td></tr>
+        <tr><td><code>node_exporter_port</code></td><td>Port where node_exporter listens</td><td>9100</td></tr>
+        <tr><td><code>environment</code></td><td>Tag: production / staging / dev</td><td>production</td></tr>
+        <tr><td><code>enabled</code></td><td>Include in Prometheus scrape or not</td><td>checked</td></tr>
+      </table>
+      <div class="callout callout-tip">After saving a Remote Server record, Prometheus config is auto-reloaded — no restart needed.</div>
+      <h2>🔥 Prometheus Config <small style="font-size:12px;color:var(--muted)">(/home/erpadmin/monitoring/prometheus/prometheus.yml)</small></h2>
+      <p>Managed automatically. Each Remote Server record adds a scrape target with a <code>server_name</code> label. Manual edits are overwritten on next save.</p>
+      <pre><code>scrape_configs:
+  - job_name: node
+    static_configs:
+      - targets: ["192.168.1.50:9100"]
+        labels:
+          server_name: "prod-server-1"
+          env: "production"</code></pre>
+      <h2>📊 Grafana Datasources</h2>
+      <table>
+        <tr><th>Name</th><th>Type</th><th>URL</th><th>UID</th></tr>
+        <tr><td>Prometheus</td><td>prometheus</td><td>http://localhost:9090</td><td><code>prometheus</code></td></tr>
+        <tr><td>Loki</td><td>loki</td><td>http://localhost:3100</td><td><code>loki</code></td></tr>
+      </table>
+      <div class="callout callout-warn">The dashboard JSON files hard-code UIDs <code>prometheus</code> and <code>loki</code>. If you rename the datasource in Grafana the dashboards will show "No Data".</div>
+      <h2>📜 Loki Config <small style="font-size:12px;color:var(--muted)">(/home/erpadmin/monitoring/loki/loki-config.yaml)</small></h2>
+      <pre><code>auth_enabled: false
+server:
+  http_listen_port: 3100
+ingester:
+  lifecycler:
+    ring:
+      kvstore: {store: inmemory}
+      replication_factor: 1
+schema_config:
+  configs:
+    - from: 2020-01-01
+      store: boltdb-shipper
+      object_store: filesystem
+      schema: v11
+      index: {prefix: index_, period: 24h}
+storage_config:
+  boltdb_shipper:
+    active_index_directory: /home/erpadmin/monitoring/loki/index
+    cache_location: /home/erpadmin/monitoring/loki/cache
+  filesystem:
+    directory: /home/erpadmin/monitoring/loki/chunks</code></pre>
+      <h2>🚢 Promtail Config <small style="font-size:12px;color:var(--muted)">(/home/erpadmin/monitoring/promtail/promtail-config.yaml)</small></h2>
+      <p>Promtail watches these log paths and sends them to Loki:</p>
+      <table>
+        <tr><th>Job</th><th>Log Path</th><th>Labels</th></tr>
+        <tr><td>frappe_logs</td><td><code>~/frappe-bench/logs/*.log</code></td><td>app=frappe</td></tr>
+        <tr><td>scheduler_logs</td><td><code>~/frappe-bench/logs/schedule.log</code></td><td>app=scheduler</td></tr>
+        <tr><td>worker_logs</td><td><code>~/frappe-bench/logs/worker*.log</code></td><td>app=worker</td></tr>
+        <tr><td>syslog</td><td><code>/var/log/syslog</code></td><td>app=syslog</td></tr>
+      </table>
+      <h2>🔐 Authentication &amp; Ports Summary</h2>
+      <table>
+        <tr><th>Service</th><th>Default Credentials</th><th>Change Location</th></tr>
+        <tr><td>Grafana</td><td>admin / admin</td><td>Grafana UI → Profile → Change Password</td></tr>
+        <tr><td>Prometheus</td><td>No auth (internal only)</td><td>Use firewall to restrict access</td></tr>
+        <tr><td>Loki</td><td>No auth (internal only)</td><td>Use firewall to restrict access</td></tr>
+      </table>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 4: DASHBOARDS -->
+    <div class="section" id="sec-dashboards">
+      <h1>📊 Dashboards Guide</h1>
+      <p>All dashboards are in Grafana at <a href="{{ grafana_url }}" target="_blank">{{ grafana_url }}</a>. Every dashboard has a <strong>Server</strong> and <strong>Environment</strong> dropdown at the top to filter by server.</p>
+
+      <h2>1️⃣ Fleet Overview <span class="badge badge-blue">frappe-k6-multi</span></h2>
+      <p><strong>Purpose:</strong> Bird's-eye view of ALL monitored servers on one screen.</p>
+      <table>
+        <tr><th>Panel</th><th>Metric</th><th>What to watch</th></tr>
+        <tr><td>Server Status Grid</td><td><code>up{job="node"}</code></td><td>Any server showing RED = offline</td></tr>
+        <tr><td>CPU Utilization (all)</td><td>irate node_cpu idle</td><td>Any server &gt;80% = investigate</td></tr>
+        <tr><td>Memory Used %</td><td>MemAvailable/MemTotal</td><td>&gt;90% = risk of OOM</td></tr>
+        <tr><td>Disk Usage %</td><td>node_filesystem_avail</td><td>&gt;85% = fill up risk</td></tr>
+        <tr><td>Network Throughput</td><td>node_network_receive_bytes</td><td>Sudden spike = traffic anomaly</td></tr>
+      </table>
+
+      <h2>2️⃣ Remote Server Deep-Dive <span class="badge badge-purple">frappe-k6-remote</span></h2>
+      <p><strong>Purpose:</strong> Full drill-down for ONE selected server. 67 panels across 9 sections.</p>
+      <table>
+        <tr><th>Section</th><th>Key Panels</th><th>Normal Range</th></tr>
+        <tr><td>System Overview</td><td>Status, Hostname, OS, Uptime, CPU Cores, RAM</td><td>Status = ONLINE (green)</td></tr>
+        <tr><td>CPU Overview</td><td>Utilization gauge, Mode breakdown, Load Average</td><td>&lt;70% busy; Load &lt; core count</td></tr>
+        <tr><td>Per-Core CPU</td><td>All cores over time</td><td>Even distribution ideal</td></tr>
+        <tr><td>CPU Details</td><td>User/System/IOWait/Steal %</td><td>IOWait &lt;5%, Steal &lt;2%</td></tr>
+        <tr><td>Memory</td><td>Utilization gauge, Breakdown, Swap</td><td>&lt;85%; Swap ~0 is healthy</td></tr>
+        <tr><td>Disk</td><td>Space %, I/O throughput, IOPS, Latency</td><td>Usage &lt;85%; Latency &lt;20ms</td></tr>
+        <tr><td>Network</td><td>RX/TX bandwidth, Errors, Drops, 24h totals</td><td>Errors/Drops = 0</td></tr>
+        <tr><td>Processes</td><td>Running, Blocked, Zombies, Fork rate</td><td>Blocked &lt;5; Zombies = 0</td></tr>
+        <tr><td>File Descriptors</td><td>Open FDs, Max FDs, FD %, Interrupts</td><td>FD% &lt;70%</td></tr>
+      </table>
+      <div class="callout callout-tip">Use the <strong>Server</strong> dropdown (top-left) to switch between servers. The dashboard title updates to show the selected server name.</div>
+
+      <h2>3️⃣ K6 Performance Dashboard <span class="badge badge-green">frappe-k6-monitor</span></h2>
+      <p><strong>Purpose:</strong> API performance results from K6 load tests.</p>
+      <table>
+        <tr><th>Panel</th><th>Metric</th><th>Good Threshold</th></tr>
+        <tr><td>Request Rate (RPS)</td><td>k6_http_reqs_total rate</td><td>Stable, no sudden drops</td></tr>
+        <tr><td>Avg Response Time</td><td>k6_http_req_duration avg</td><td>&lt;200ms for APIs</td></tr>
+        <tr><td>P95 Latency</td><td>k6_http_req_duration p95</td><td>&lt;500ms</td></tr>
+        <tr><td>P99 Latency</td><td>k6_http_req_duration p99</td><td>&lt;1000ms</td></tr>
+        <tr><td>Error Rate %</td><td>http_req_failed rate</td><td>&lt;1%</td></tr>
+        <tr><td>VU Count</td><td>k6_vus</td><td>As configured in test</td></tr>
+      </table>
+
+      <h2>4️⃣ Database Dashboard <span class="badge badge-yellow">frappe-k6-db</span></h2>
+      <p><strong>Purpose:</strong> MariaDB/MySQL deep metrics.</p>
+      <table>
+        <tr><th>Panel</th><th>What it means</th><th>Warning Signs</th></tr>
+        <tr><td>Queries/sec</td><td>Database throughput</td><td>Sudden drop = application issue</td></tr>
+        <tr><td>Slow Queries</td><td>Queries &gt;long_query_time</td><td>&gt;0 = needs index investigation</td></tr>
+        <tr><td>Active Connections</td><td>Current open connections</td><td>Near max_connections limit</td></tr>
+        <tr><td>InnoDB Buffer Hit %</td><td>Cache effectiveness</td><td>&lt;95% = needs more RAM</td></tr>
+        <tr><td>Table Lock Waits</td><td>Concurrency contention</td><td>&gt;0 frequently = lock issues</td></tr>
+        <tr><td>Replication Lag</td><td>Replica delay (seconds)</td><td>&gt;30s = replica falling behind</td></tr>
+      </table>
+
+      <h2>5️⃣ Redis Dashboard <span class="badge badge-red">frappe-k6-redis</span></h2>
+      <table>
+        <tr><th>Panel</th><th>What it means</th><th>Warning Signs</th></tr>
+        <tr><td>Used Memory</td><td>RAM consumed by Redis</td><td>Near maxmemory = evictions</td></tr>
+        <tr><td>Commands/sec</td><td>Redis operation rate</td><td>Sudden drop = Redis not receiving requests</td></tr>
+        <tr><td>Hit Rate %</td><td>Cache effectiveness</td><td>&lt;80% = poor cache design</td></tr>
+        <tr><td>Evicted Keys</td><td>Keys removed due to memory pressure</td><td>&gt;0 = increase maxmemory</td></tr>
+        <tr><td>Connected Clients</td><td>Open Redis connections</td><td>Unusually high = connection leak</td></tr>
+        <tr><td>Keyspace</td><td>Number of keys per DB</td><td>Growing without bound = check TTLs</td></tr>
+      </table>
+
+      <h2>6️⃣ Worker Dashboard <span class="badge badge-blue">frappe-k6-workers</span></h2>
+      <table>
+        <tr><th>Panel</th><th>What it means</th><th>Warning Signs</th></tr>
+        <tr><td>Queue Depth</td><td>Jobs waiting to run</td><td>Growing queue = workers too slow</td></tr>
+        <tr><td>Job Failure Rate</td><td>Failed background jobs</td><td>&gt;0 = check worker logs</td></tr>
+        <tr><td>Active Workers</td><td>Currently processing jobs</td><td>0 when queue has jobs = worker dead</td></tr>
+        <tr><td>Job Duration</td><td>Time per job</td><td>Increasing trend = performance degradation</td></tr>
+      </table>
+
+      <h2>7️⃣ Node/Server Dashboard <span class="badge badge-purple">frappe-k6-node</span></h2>
+      <p>Same metrics as Remote Server Deep-Dive but focused on the <strong>local Frappe server</strong>.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 5: READING -->
+    <div class="section" id="sec-reading">
+      <h1>📖 How to Read the Dashboards</h1>
+      <h2>🎨 Colour System</h2>
+      <table>
+        <tr><th>Colour</th><th>Meaning</th><th>Action</th></tr>
+        <tr><td><span class="thresh-green">🟢 Green</span></td><td>Within normal range</td><td>No action needed</td></tr>
+        <tr><td><span class="thresh-yellow">🟡 Yellow</span></td><td>Approaching threshold</td><td>Monitor closely</td></tr>
+        <tr><td><span class="thresh-red">🔴 Red</span></td><td>Exceeded threshold — degraded</td><td>Investigate immediately</td></tr>
+      </table>
+      <h2>📈 Metric Quick Reference</h2>
+      <table class="metric-table">
+        <tr><th>Metric</th><th class="thresh-green">Normal</th><th class="thresh-yellow">Warning</th><th class="thresh-red">Critical</th><th>What to do when critical</th></tr>
+        <tr><td>CPU Usage</td><td>&lt;70%</td><td>70–85%</td><td>&gt;85%</td><td>Find top process: <code>top -c</code></td></tr>
+        <tr><td>CPU IOWait</td><td>&lt;5%</td><td>5–15%</td><td>&gt;15%</td><td>Disk I/O bottleneck — check slow queries or large file ops</td></tr>
+        <tr><td>CPU Steal</td><td>&lt;2%</td><td>2–10%</td><td>&gt;10%</td><td>Cloud VM over-provisioned — upgrade instance or contact provider</td></tr>
+        <tr><td>Memory Used</td><td>&lt;80%</td><td>80–90%</td><td>&gt;90%</td><td>Restart services leaking memory; consider RAM upgrade</td></tr>
+        <tr><td>Swap Used</td><td>0 MB</td><td>&gt;100 MB</td><td>&gt;500 MB</td><td>RAM is exhausted — memory leak or insufficient RAM</td></tr>
+        <tr><td>Disk Usage</td><td>&lt;75%</td><td>75–85%</td><td>&gt;85%</td><td>Clean old logs/backups: <code>du -sh /var/log/*</code></td></tr>
+        <tr><td>Disk Latency</td><td>&lt;5ms</td><td>5–20ms</td><td>&gt;20ms</td><td>High I/O wait — check for large queries or backups running</td></tr>
+        <tr><td>Load Average</td><td>&lt;CPU cores</td><td>1–2× cores</td><td>&gt;2× cores</td><td>System overloaded — reduce concurrent tasks</td></tr>
+        <tr><td>Network Errors</td><td>0</td><td>&gt;0 occasionally</td><td>Sustained &gt;0</td><td>Hardware/cable issue or MTU mismatch</td></tr>
+        <tr><td>P95 Latency</td><td>&lt;300ms</td><td>300–800ms</td><td>&gt;800ms</td><td>Profile slowest API endpoints</td></tr>
+        <tr><td>Error Rate</td><td>&lt;0.1%</td><td>0.1–1%</td><td>&gt;1%</td><td>Check application logs for 4xx/5xx errors</td></tr>
+        <tr><td>DB Connections</td><td>&lt;50% max</td><td>50–80% max</td><td>&gt;80% max</td><td>Add connection pooling or increase max_connections</td></tr>
+        <tr><td>Redis Hit Rate</td><td>&gt;90%</td><td>80–90%</td><td>&lt;80%</td><td>Cache miss storm — check cache key expiry logic</td></tr>
+        <tr><td>File Descriptors</td><td>&lt;50%</td><td>50–70%</td><td>&gt;70%</td><td>Increase <code>ulimit -n</code>; check for FD leaks</td></tr>
+      </table>
+      <h2>📊 Chart Types Explained</h2>
+      <table>
+        <tr><th>Chart Type</th><th>When used</th><th>How to read</th></tr>
+        <tr><td>📈 Time Series</td><td>Trends over time</td><td>X-axis = time, Y-axis = metric value. Upward trend = increasing. Spikes = sudden events.</td></tr>
+        <tr><td>🕐 Gauge</td><td>Current single value</td><td>Needle position + colour zone. Red arc = danger zone.</td></tr>
+        <tr><td>📟 Stat</td><td>Single current value with sparkline</td><td>Large number = current value. Background colour = threshold zone.</td></tr>
+        <tr><td>📊 Bar Gauge</td><td>Comparing across instances</td><td>Longer bar = higher value. Useful for disk usage per mount or per-server comparison.</td></tr>
+        <tr><td>🎛️ Table</td><td>Detailed data</td><td>Sortable columns. Click header to sort. Colour cells = threshold state.</td></tr>
+      </table>
+      <h2>🔍 Common Patterns &amp; What They Mean</h2>
+      <h3>CPU Sawtooth Pattern</h3>
+      <p>CPU rises then drops regularly → Scheduled job (cron/scheduler) running. Normal if predictable.</p>
+      <h3>Memory Never Decreases</h3>
+      <p>Memory grows but never falls → Memory leak. Identify the process with <code>ps aux --sort=-%mem | head</code>.</p>
+      <h3>Disk IOWait Spikes with Slow Queries</h3>
+      <p>IOWait &amp; slow query count spike together → Database doing full table scans. Add indexes.</p>
+      <h3>High P99 but Low P50</h3>
+      <p>Most requests are fast but a few are very slow → Tail latency issue. Check for lock waits or GC pauses.</p>
+      <h3>Redis Hit Rate Drops</h3>
+      <p>Hit rate drops suddenly → Cache was flushed or TTLs too short. Check if a deployment cleared caches.</p>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 6: LOAD TEST -->
+    <div class="section" id="sec-loadtest">
+      <h1>🔫 Load Testing Guide</h1>
+      <h2>🎯 Test Scenarios</h2>
+      <table>
+        <tr><th>Scenario</th><th>Goal</th><th>VUs</th><th>Duration</th><th>When to use</th></tr>
+        <tr><td><span class="badge badge-green">Smoke</span></td><td>Verify basic functionality</td><td>2</td><td>1m</td><td>After every deployment</td></tr>
+        <tr><td><span class="badge badge-blue">Load</span></td><td>Normal expected traffic</td><td>10–50</td><td>10–30m</td><td>Weekly baseline testing</td></tr>
+        <tr><td><span class="badge badge-yellow">Stress</span></td><td>Find breaking point</td><td>Ramp to 200+</td><td>30–60m</td><td>Before major launches</td></tr>
+        <tr><td><span class="badge badge-red">Spike</span></td><td>Sudden traffic burst</td><td>10→500→10</td><td>5m</td><td>Flash sale / campaign testing</td></tr>
+        <tr><td><span class="badge badge-purple">Soak</span></td><td>Memory leaks / long-term stability</td><td>25</td><td>4–12h</td><td>Pre-production validation</td></tr>
+      </table>
+      <h2>📝 Creating a Test Configuration</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Go to K6 Monitor → 🔧 Test Builder tab</div><p>Or: Frappe → K6 Load Test Config → New</p></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Fill in test details</div>
+        <ul>
+          <li><strong>Test Name</strong>: Descriptive name (e.g., "Login API — Stress Test")</li>
+          <li><strong>Scenario</strong>: Pick from Smoke / Load / Stress / Spike / Soak</li>
+          <li><strong>VUs</strong>: Number of virtual users (concurrent users)</li>
+          <li><strong>Duration</strong>: How long to run (e.g., <code>5m</code>, <code>30m</code>, <code>2h</code>)</li>
+          <li><strong>Ramp Up</strong>: Time to reach full VUs (e.g., <code>1m</code>)</li>
+        </ul>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Add API Endpoints</div>
+        <table>
+          <tr><th>Field</th><th>Description</th><th>Example</th></tr>
+          <tr><td>URL</td><td>Full endpoint URL</td><td>/api/method/frappe.client.get_list</td></tr>
+          <tr><td>Method</td><td>HTTP method</td><td>GET / POST / PUT</td></tr>
+          <tr><td>Auth Type</td><td>How to authenticate</td><td>Session (Frappe Login)</td></tr>
+          <tr><td>Headers</td><td>JSON headers object</td><td><code>{"Content-Type":"application/json"}</code></td></tr>
+          <tr><td>Body</td><td>Request payload (POST only)</td><td><code>{"doctype":"Customer"}</code></td></tr>
+          <tr><td>Expected Status</td><td>HTTP status to verify</td><td>200</td></tr>
+        </table>
+      </div></div>
+      <div class="step"><div class="step-num">4</div><div class="step-body"><div class="step-title">Run the test</div>
+        <p>Click <strong>💾 Save &amp; Run Now</strong> — K6 executes immediately and streams metrics to Prometheus. Open Grafana to watch live results.</p>
+      </div></div>
+      <h2>📊 Understanding Test Results</h2>
+      <table>
+        <tr><th>Metric</th><th>Good</th><th>Poor</th><th>What it means</th></tr>
+        <tr><td>http_req_duration (avg)</td><td>&lt;200ms</td><td>&gt;500ms</td><td>Average time for a request to complete</td></tr>
+        <tr><td>http_req_duration (p95)</td><td>&lt;400ms</td><td>&gt;1s</td><td>95% of requests completed within this time</td></tr>
+        <tr><td>http_req_failed</td><td>&lt;1%</td><td>&gt;5%</td><td>Percentage of requests that returned an error</td></tr>
+        <tr><td>http_reqs (rate)</td><td>Stable</td><td>Declining</td><td>Requests per second — declining under load = bottleneck</td></tr>
+        <tr><td>vus</td><td>As configured</td><td>Drops</td><td>Active virtual users — drops = K6 process issue</td></tr>
+      </table>
+      <div class="callout callout-tip">Compare runs side-by-side in Grafana by adjusting the time range to cover both test windows.</div>
+      <h2>🔐 Authentication Types</h2>
+      <table>
+        <tr><th>Type</th><th>How it works</th><th>Use case</th></tr>
+        <tr><td>None</td><td>No auth headers</td><td>Public APIs</td></tr>
+        <tr><td>Session (Frappe Login)</td><td>Uses logged-in session SID + CSRF token</td><td>Frappe APIs requiring login</td></tr>
+        <tr><td>API Key</td><td>Frappe API Key + Secret in Authorization header</td><td>Frappe REST APIs</td></tr>
+        <tr><td>Basic Auth</td><td>Username:Password in Authorization header</td><td>Non-Frappe APIs</td></tr>
+        <tr><td>Bearer Token</td><td>JWT/OAuth token in Authorization header</td><td>Third-party APIs</td></tr>
+      </table>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 7: REMOTE -->
+    <div class="section" id="sec-remote">
+      <h1>🌐 Remote Server Monitoring</h1>
+      <h2>📋 Overview</h2>
+      <p>Add any Linux server to the monitoring system in 3 steps: install node_exporter on it, register it in Frappe, and Prometheus automatically starts scraping it.</p>
+      <h2>Step 1 — Install node_exporter on the Remote Server</h2>
+      <div class="callout callout-info">Run the installer script on the <strong>remote server</strong> (not this Frappe server).</div>
+      <pre><code id="c-remote-install"># Option A: Use the bundled installer script (copy from this server first)
+scp /home/erpadmin/eduv16/apps/frappe_k6/frappe_k6/setup/install_remote_exporters.sh user@remote-server:~/
+ssh user@remote-server
+chmod +x install_remote_exporters.sh
+./install_remote_exporters.sh</code><button class="copy-btn" onclick="cp('c-remote-install')">Copy</button></pre>
+      <pre><code id="c-manual-node"># Option B: Manual install (Ubuntu)
+wget https://github.com/prometheus/node_exporter/releases/download/v1.7.0/node_exporter-1.7.0.linux-amd64.tar.gz
+tar xvf node_exporter-*.tar.gz
+sudo mv node_exporter-*/node_exporter /usr/local/bin/
+# Create systemd service
+sudo tee /etc/systemd/system/node_exporter.service &lt;&lt; 'EOF'
+[Unit]
+Description=Node Exporter
+After=network.target
+[Service]
+ExecStart=/usr/local/bin/node_exporter
+Restart=on-failure
+[Install]
+WantedBy=multi-user.target
+EOF
+sudo systemctl enable --now node_exporter
+# Verify
+curl http://localhost:9100/metrics | head -3</code><button class="copy-btn" onclick="cp('c-manual-node')">Copy</button></pre>
+      <h2>Step 2 — Open Firewall on Remote Server</h2>
+      <pre><code id="c-firewall"># Allow Prometheus server to scrape
+sudo ufw allow from &lt;PROMETHEUS_SERVER_IP&gt; to any port 9100
+# Verify port is listening
+ss -tlnp | grep 9100</code><button class="copy-btn" onclick="cp('c-firewall')">Copy</button></pre>
+      <h2>Step 3 — Register in Frappe</h2>
+      <div class="step"><div class="step-num">1</div><div class="step-body"><div class="step-title">Go to Frappe → Remote Server → New</div></div></div>
+      <div class="step"><div class="step-num">2</div><div class="step-body"><div class="step-title">Fill in the fields</div>
+        <table>
+          <tr><th>Field</th><th>Value</th></tr>
+          <tr><td>Server Name</td><td>Unique short name — used in Grafana filter (e.g., <code>prod-app-1</code>)</td></tr>
+          <tr><td>IP Address</td><td>IP or hostname of the remote server</td></tr>
+          <tr><td>node_exporter Port</td><td>9100 (default)</td></tr>
+          <tr><td>Environment</td><td>production / staging / development</td></tr>
+          <tr><td>Enabled</td><td>✓ checked</td></tr>
+        </table>
+      </div></div>
+      <div class="step"><div class="step-num">3</div><div class="step-body"><div class="step-title">Save — Prometheus auto-updates</div><p>Prometheus config is rewritten and reloaded automatically. Within 15 seconds, the server appears in Grafana.</p></div></div>
+      <h2>✅ Verify Connectivity</h2>
+      <pre><code id="c-verify-remote"># From the Frappe server — test the remote exporter is reachable
+curl http://&lt;REMOTE_IP&gt;:9100/metrics | head -3
+
+# Check Prometheus is scraping it
+curl 'http://localhost:9090/api/v1/targets' | python3 -c "
+import json,sys
+for t in json.load(sys.stdin)['data']['activeTargets']:
+    print(t['labels'].get('server_name','?'), t['health'])
+"</code><button class="copy-btn" onclick="cp('c-verify-remote')">Copy</button></pre>
+      <h2>📊 View Remote Metrics</h2>
+      <p>Open Grafana → <strong>Remote Server Deep-Dive</strong> dashboard → Select your server from the <strong>Server</strong> dropdown at the top.</p>
+      <h2>📜 Add Log Collection (Optional)</h2>
+      <p>To collect logs from the remote server, install Promtail on it and point it to your Loki instance:</p>
+      <pre><code id="c-promtail-remote">server:
+  http_listen_port: 9080
+
+clients:
+  - url: http://&lt;FRAPPE_SERVER_IP&gt;:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: remote_syslog
+    static_configs:
+      - targets: [localhost]
+        labels:
+          server_name: "prod-app-1"
+          job: syslog
+          __path__: /var/log/syslog</code><button class="copy-btn" onclick="cp('c-promtail-remote')">Copy</button></pre>
+      <h2>🔌 Supported Exporters per Server</h2>
+      <table>
+        <tr><th>Exporter</th><th>Port</th><th>Metrics</th><th>Required?</th></tr>
+        <tr><td>node_exporter</td><td>9100</td><td>CPU, RAM, Disk, Network, Processes</td><td>✅ Yes</td></tr>
+        <tr><td>redis_exporter</td><td>9121</td><td>Redis memory, commands, keyspace</td><td>If Redis is installed</td></tr>
+        <tr><td>mysqld_exporter</td><td>9104</td><td>MariaDB/MySQL queries, connections, InnoDB</td><td>If DB is installed</td></tr>
+        <tr><td>Promtail</td><td>9080</td><td>Log shipping to Loki</td><td>Optional</td></tr>
+      </table>
+    </div>
+
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 8: TROUBLESHOOT -->
+    <div class="section" id="sec-troubleshoot">
+      <h1>🔧 Troubleshooting</h1>
+      <h2>🚦 Service Status Check (Run First)</h2>
+      <pre><code id="c-status">systemctl status prometheus grafana-server loki promtail node_exporter frappe-k6-exporter redis_exporter 2>&amp;1 | grep -E "●|Active:|failed"</code><button class="copy-btn" onclick="cp('c-status')">Copy</button></pre>
+
+      <h3>❌ Grafana not accessible (port 3000)</h3>
+      <pre><code id="c-grafana-fix">sudo systemctl restart grafana-server
+sudo journalctl -u grafana-server -n 50 --no-pager
+# Check config
+sudo cat /etc/grafana/grafana.ini | grep http_port</code><button class="copy-btn" onclick="cp('c-grafana-fix')">Copy</button></pre>
+
+      <h3>❌ Prometheus not collecting metrics</h3>
+      <pre><code id="c-prom-fix"># Check targets
+curl 'http://localhost:9090/api/v1/targets' | python3 -m json.tool | grep -A3 '"health"'
+# Reload config
+curl -X POST http://localhost:9090/-/reload
+# Check logs
+sudo journalctl -u prometheus -n 30 --no-pager</code><button class="copy-btn" onclick="cp('c-prom-fix')">Copy</button></pre>
+
+      <h3>❌ Dashboard shows "No Data"</h3>
+      <table>
+        <tr><th>Check</th><th>Command</th></tr>
+        <tr><td>Datasource UID correct?</td><td>Grafana → Datasources → verify UID = <code>prometheus</code></td></tr>
+        <tr><td>Metric exists in Prometheus?</td><td><code>curl 'http://localhost:9090/api/v1/query?query=up'</code></td></tr>
+        <tr><td>Time range too narrow?</td><td>Set Grafana time range to "Last 1 hour"</td></tr>
+        <tr><td>Scrape target down?</td><td>Check Prometheus UI → Status → Targets</td></tr>
+      </table>
+
+      <h3>❌ Loki not receiving logs</h3>
+      <pre><code id="c-loki-fix">sudo systemctl restart loki promtail
+# Check Promtail is reading files
+curl http://localhost:9080/metrics | grep promtail_files_active_total
+# Check Loki ingestion
+curl http://localhost:3100/loki/api/v1/labels
+# Tail Promtail log
+sudo journalctl -u promtail -f -n 20</code><button class="copy-btn" onclick="cp('c-loki-fix')">Copy</button></pre>
+
+      <h3>❌ Remote server shows "OFFLINE" in Grafana</h3>
+      <pre><code id="c-offline-fix"># 1 — Is node_exporter running on remote?
+ssh user@remote "systemctl status node_exporter"
+# 2 — Is port 9100 reachable from Prometheus server?
+curl http://&lt;REMOTE_IP&gt;:9100/metrics | head -3
+# 3 — Check firewall on remote server
+ssh user@remote "sudo ufw status | grep 9100"
+# 4 — Is server registered in Frappe?
+# Frappe → Remote Server → verify Enabled = true</code><button class="copy-btn" onclick="cp('c-offline-fix')">Copy</button></pre>
+
+      <h3>❌ K6 test fails to start</h3>
+      <pre><code id="c-k6-fix">which k6
+k6 version
+# If not found — check path
+ls /home/erpadmin/monitoring/k6/
+# Check K6 exporter
+curl http://localhost:9200/metrics | head -5</code><button class="copy-btn" onclick="cp('c-k6-fix')">Copy</button></pre>
+
+      <h3>❌ Authentication errors in API tests</h3>
+      <ul>
+        <li>Use <strong>Session (Frappe Login)</strong> auth type — it automatically adds SID &amp; CSRF token</li>
+        <li>API Key auth: go to Frappe → User → API Access → Generate Keys</li>
+        <li>Verify the API key has the correct Role permission for the endpoint</li>
+      </ul>
+
+      <h2>📋 Log Locations</h2>
+      <table>
+        <tr><th>Service</th><th>Log Command</th></tr>
+        <tr><td>Grafana</td><td><code>sudo journalctl -u grafana-server -n 50</code></td></tr>
+        <tr><td>Prometheus</td><td><code>sudo journalctl -u prometheus -n 50</code></td></tr>
+        <tr><td>Loki</td><td><code>sudo journalctl -u loki -n 50</code></td></tr>
+        <tr><td>Promtail</td><td><code>sudo journalctl -u promtail -n 50</code></td></tr>
+        <tr><td>node_exporter</td><td><code>sudo journalctl -u node_exporter -n 50</code></td></tr>
+        <tr><td>Frappe K6 exporter</td><td><code>sudo journalctl -u frappe-k6-exporter -n 50</code></td></tr>
+        <tr><td>Frappe bench</td><td><code>tail -f ~/frappe-bench/logs/*.log</code></td></tr>
+      </table>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ SECTION 9: BEST PRACTICES -->
+    <div class="section" id="sec-bestpractices">
+      <h1>✅ Best Practices</h1>
+      <h2>🔐 Security</h2>
+      <ul>
+        <li><strong>Change Grafana default password</strong> immediately after install</li>
+        <li>Never expose Prometheus (9090) or Loki (3100) to the internet — use firewall rules</li>
+        <li>Restrict node_exporter (9100) to Prometheus server IP only</li>
+        <li>Use HTTPS reverse proxy (nginx) in front of Grafana for production</li>
+        <li>Store API keys in Monitor Settings, not in test scripts</li>
+      </ul>
+      <h2>💾 Data Retention</h2>
+      <table>
+        <tr><th>Service</th><th>Default Retention</th><th>Change Setting</th></tr>
+        <tr><td>Prometheus</td><td>15 days</td><td>Add <code>--storage.tsdb.retention.time=30d</code> to service ExecStart</td></tr>
+        <tr><td>Loki</td><td>Until disk full</td><td>Add <code>retention_period: 720h</code> to loki-config.yaml compactor section</td></tr>
+        <tr><td>Grafana</td><td>Indefinite (SQLite)</td><td>Regular backup of <code>/var/lib/grafana/grafana.db</code></td></tr>
+      </table>
+      <h2>📊 Dashboard Optimization</h2>
+      <ul>
+        <li>Use <strong>30s refresh</strong> for production dashboards (avoids Prometheus overload)</li>
+        <li>Set default time range to <strong>Last 3 hours</strong> — long ranges slow Prometheus queries</li>
+        <li>Use the <strong>Server dropdown</strong> to filter — avoid loading all-server data at once</li>
+        <li>Collapse unused rows to speed up dashboard rendering</li>
+      </ul>
+      <h2>🔫 Load Testing Best Practices</h2>
+      <ul>
+        <li><strong>Always run Smoke test first</strong> before stress/soak tests</li>
+        <li>Run load tests during <strong>off-peak hours</strong> in production</li>
+        <li>Set realistic <strong>think time</strong> (1–3 seconds) between requests</li>
+        <li>Don't test 3rd-party APIs you don't own (e.g., payment gateways)</li>
+        <li>Monitor system resources in Grafana <em>while</em> the test runs</li>
+        <li>Compare P95 latency, not just averages — P95 shows real user experience</li>
+      </ul>
+      <h2>🌐 Multi-Server Monitoring</h2>
+      <ul>
+        <li>Use consistent <code>server_name</code> labels (e.g., <code>prod-app-1</code>, <code>prod-db-1</code>)</li>
+        <li>Use <code>environment</code> tags (production/staging/dev) to group servers</li>
+        <li>Set up alerting in Grafana for CPU &gt;85%, Disk &gt;85%, and server offline events</li>
+        <li>Schedule monthly capacity reviews using the Fleet Overview dashboard</li>
+      </ul>
+      <h2>💡 Backup &amp; Recovery</h2>
+      <pre><code id="c-backup"># Backup Grafana dashboards + datasources
+sudo cp -r /var/lib/grafana /backup/grafana-$(date +%Y%m%d)
+# Backup Prometheus data
+sudo cp -r /home/erpadmin/monitoring/prometheus/data /backup/prom-$(date +%Y%m%d)
+# Backup all dashboard JSON source
+cp /home/erpadmin/eduv16/apps/frappe_k6/frappe_k6/setup/*.json /backup/dashboards/</code><button class="copy-btn" onclick="cp('c-backup')">Copy</button></pre>
+      <div class="callout callout-tip">Dashboard JSON files in <code>/frappe_k6/setup/</code> are the source of truth. You can always re-import them into a fresh Grafana instance.</div>
+    </div>
+
+  </main>
+</div>
+
+<script>
+// Section switching
+function show(id) {
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.sidebar-link').forEach(l => l.classList.remove('active'));
+  const sec = document.getElementById('sec-' + id);
+  if (sec) sec.classList.add('active');
+  event.target.classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+// Copy to clipboard
+function cp(id) {
+  const el = document.getElementById(id);
+  const txt = el ? el.textContent : '';
+  if (navigator.clipboard && window.isSecureContext) {
+    navigator.clipboard.writeText(txt).then(() => flash(id));
+  } else {
+    const ta = document.createElement('textarea');
+    ta.value = txt; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+    document.body.removeChild(ta); flash(id);
+  }
+}
+function flash(id) {
+  const btn = document.querySelector(`button[onclick="cp('${id}')"]`);
+  if (btn) { const orig = btn.textContent; btn.textContent = '✓ Copied'; btn.style.color = '#22c55e'; setTimeout(() => { btn.textContent = orig; btn.style.color = ''; }, 1500); }
+}
+
+// Sidebar search filter
+function filterNav(q) {
+  const lq = q.toLowerCase();
+  document.querySelectorAll('.sidebar-link').forEach(l => {
+    l.style.display = l.dataset.label.toLowerCase().includes(lq) ? '' : 'none';
+  });
+}
+
+// Highlight active link on load
+document.addEventListener('DOMContentLoaded', function() {
+  const hash = window.location.hash.replace('#','');
+  if (hash) show(hash);
+});
+</script>
+{% endblock %}
