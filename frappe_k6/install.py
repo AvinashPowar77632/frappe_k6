@@ -195,7 +195,6 @@ def _setup_slow_query_log():
     if not frappe.db.exists("DocType", "Slow Query Log"):
         frappe.get_doc({
             "doctype": "DocType",
-            "module": "frappe_k6",
             "name": "Slow Query Log",
             "document_type": "System",
             "engine": "InnoDB",
@@ -206,7 +205,6 @@ def _setup_slow_query_log():
                 {"fieldname": "seen", "fieldtype": "Check", "label": "Seen", "default": "0", "hidden": 1},
             ],
             "icon": "fa fa-hourglass",
-            "module": "frappe_k6",
         }).insert(ignore_permissions=True)
         frappe.db.commit()
 
