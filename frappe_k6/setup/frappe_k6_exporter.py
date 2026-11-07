@@ -5,68 +5,79 @@ Translates Frappe's JSON metrics API → Prometheus text exposition format.
 Runs on port 9200. Start via systemd or:  python3 frappe_k6_exporter.py
 
 Config via environment variables:
-  FRAPPE_URL   Base URL of the Frappe site  (default: http://localhost:8000)
-  EXPORTER_PORT  Port to listen on           (default: 9200)
+  FRAPPE_URL              Base URL of the Frappe site  (default: http://localhost:8000)
+  EXPORTER_PORT           Port to listen on            (default: 9200)
+  FRAPPE_K6_METRICS_TOKEN Token (sent as X-Frappe-K6-Token) matching `frappe_k6_metrics_token` in site config
+  FRAPPE_K6_TOKEN_FILE    File holding that token      (default: ~/monitoring/.frappe_k6_metrics_token)
 """
 
 import json
 import os
 import sys
 import time
-import urllib.request
 import urllib.error
+import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
 FRAPPE_URL    = os.environ.get("FRAPPE_URL",    "http://localhost:8000")
 EXPORTER_PORT = int(os.environ.get("EXPORTER_PORT", "9200"))
 SCRAPE_TIMEOUT = 10  # seconds
+TOKEN_FILE = os.environ.get(
+    "FRAPPE_K6_TOKEN_FILE",
+    os.path.join(os.path.expanduser("~"), "monitoring", ".frappe_k6_metrics_token"),
+)
+
+
+def _token():
+    token = os.environ.get("FRAPPE_K6_METRICS_TOKEN", "").strip()
+    if token:
+        return token
+    try:
+        with open(TOKEN_FILE) as f:
+            return f.read().strip()
+    except OSError:
+        return ""
+
+
+def _get_json(method):
+    headers = {"Accept": "application/json"}
+    token = _token()
+    if token:
+        headers["X-Frappe-K6-Token"] = token
+    req = urllib.request.Request(f"{FRAPPE_URL}/api/method/{method}", headers=headers)
+    with urllib.request.urlopen(req, timeout=SCRAPE_TIMEOUT) as resp:
+        return json.loads(resp.read()).get("message")
 
 
 def _fetch_metrics():
     """Call Frappe's get_all_metrics API and return the parsed JSON dict."""
-    url = f"{FRAPPE_URL}/api/method/frappe_k6.api.system_metrics.get_all_metrics"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=SCRAPE_TIMEOUT) as resp:
-            data = json.loads(resp.read())
-        return data.get("message", {})
+        return _get_json("frappe_k6.api.system_metrics.get_all_metrics") or {}
     except Exception as e:
         print(f"[exporter] system metrics unavailable: {e}", flush=True)
         return {}
 
 
-def _fetch_k6_runs():
-    """Call Frappe's get_active_runs API."""
-    url = f"{FRAPPE_URL}/api/method/frappe_k6.api.load_test.get_active_runs"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
-    try:
-        with urllib.request.urlopen(req, timeout=SCRAPE_TIMEOUT) as resp:
-            data = json.loads(resp.read())
-        return data.get("message", [])
-    except Exception:
-        return []
-
-
 def _fetch_active_run_metrics():
     """Call Frappe's get_active_run_metrics API for per-run K6 stats."""
-    url = f"{FRAPPE_URL}/api/method/frappe_k6.api.load_test.get_active_run_metrics"
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
     try:
-        with urllib.request.urlopen(req, timeout=SCRAPE_TIMEOUT) as resp:
-            data = json.loads(resp.read())
-        return data.get("message", [])
-    except Exception:
+        return _get_json("frappe_k6.api.load_test.get_active_run_metrics") or []
+    except Exception as e:
+        print(f"[exporter] run metrics unavailable: {e}", flush=True)
         return []
 
 
 def _build_text(m, active_runs):
     lines = []
+    declared = set()
 
-    def gauge(name, help_text, value, **labels):
+    def gauge(name, help_text, value, _kind="gauge", **labels):
         label_str = ",".join(f'{k}="{v}"' for k, v in labels.items())
         tag = f"{{{label_str}}}" if label_str else ""
-        lines.append(f"# HELP {name} {help_text}")
-        lines.append(f"# TYPE {name} gauge")
+        if name not in declared:  # HELP/TYPE once per metric family
+            lines.append(f"# HELP {name} {help_text}")
+            lines.append(f"# TYPE {name} {_kind}")
+            declared.add(name)
         try:
             lines.append(f"{name}{tag} {float(value):.6g}")
         except (TypeError, ValueError):
@@ -100,8 +111,8 @@ def _build_text(m, active_runs):
     gauge("frappe_disk_percent",    "Disk usage %",             disk.get("percent",  0))
 
     # Network
-    gauge("frappe_network_sent_mb", "Network cumulative sent MiB",  net.get("bytes_sent_mb", 0))
-    gauge("frappe_network_recv_mb", "Network cumulative recv MiB",  net.get("bytes_recv_mb", 0))
+    gauge("frappe_network_sent_mb", "Network cumulative sent MiB",  net.get("bytes_sent_mb", 0), _kind="counter")
+    gauge("frappe_network_recv_mb", "Network cumulative recv MiB",  net.get("bytes_recv_mb", 0), _kind="counter")
 
     # Redis
     gauge("frappe_redis_connected",    "Redis up (1=ok)",         1 if rds.get("status") == "connected" else 0)
@@ -110,9 +121,9 @@ def _build_text(m, active_runs):
     gauge("frappe_redis_clients",      "Redis connected clients", rds.get("connected_clients",  0))
 
     # Database
-    gauge("frappe_db_connected",    "MariaDB up (1=ok)",          1 if db.get("status") == "connected" else 0)
+    gauge("frappe_db_connected",    "Database up (1=ok)",         1 if db.get("status") == "connected" else 0)
     gauge("frappe_db_connections",  "Active DB connections",      db.get("connections",    0))
-    gauge("frappe_db_slow_queries", "Cumulative slow queries",    db.get("slow_queries",   0))
+    gauge("frappe_db_slow_queries", "Cumulative slow queries",    db.get("slow_queries",   0), _kind="counter")
 
     # Workers
     gauge("frappe_worker_count",    "Frappe worker count",        wrk.get("count", 0))
@@ -134,12 +145,15 @@ def _build_text(m, active_runs):
 def _build_k6_run_text(run_metrics):
     """Build Prometheus text for live K6 run metrics."""
     lines = []
+    declared = set()
 
     def k6_gauge(name, help_text, value, **labels):
         label_str = ",".join(f'{k}="{v}"' for k, v in labels.items())
         tag = f"{{{label_str}}}" if label_str else ""
-        lines.append(f"# HELP {name} {help_text}")
-        lines.append(f"# TYPE {name} gauge")
+        if name not in declared:  # several runs share one metric family
+            lines.append(f"# HELP {name} {help_text}")
+            lines.append(f"# TYPE {name} gauge")
+            declared.add(name)
         try:
             lines.append(f"{name}{tag} {float(value):.6g}")
         except (TypeError, ValueError):
@@ -211,10 +225,9 @@ class MetricsHandler(BaseHTTPRequestHandler):
         # Each fetch is independently safe — a timeout in system metrics
         # must never prevent K6 run metrics from being returned.
         m           = _fetch_metrics()             # returns {} on error
-        runs        = _fetch_k6_runs()             # returns [] on error
         run_metrics = _fetch_active_run_metrics()  # returns [] on error
         try:
-            body = (_build_text(m, runs) + _build_k6_run_text(run_metrics)).encode("utf-8")
+            body = (_build_text(m, run_metrics) + _build_k6_run_text(run_metrics)).encode("utf-8")
         except Exception as exc:
             body = f"# build error: {exc}\n".encode("utf-8")
             print(f"[exporter] build FAIL: {exc}", flush=True)

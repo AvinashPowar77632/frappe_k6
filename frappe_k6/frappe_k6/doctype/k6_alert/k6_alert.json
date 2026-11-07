@@ -1,0 +1,129 @@
+{
+ "actions": [],
+ "creation": "2026-10-30 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "alert_rule",
+  "load_test_run",
+  "load_test_config",
+  "severity",
+  "column_break_1",
+  "metric",
+  "actual_value",
+  "limit_value",
+  "section_message",
+  "message",
+  "delivery"
+ ],
+ "fields": [
+  {
+   "fieldname": "alert_rule",
+   "fieldtype": "Link",
+   "label": "Alert Rule",
+   "options": "K6 Alert Rule",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "load_test_run",
+   "fieldtype": "Link",
+   "label": "Load Test Run",
+   "options": "Load Test Run",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "load_test_config",
+   "fieldtype": "Link",
+   "label": "Load Test Config",
+   "options": "Load Test Config",
+   "read_only": 1
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Data",
+   "label": "Severity",
+   "in_list_view": 1,
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "metric",
+   "fieldtype": "Data",
+   "label": "Metric",
+   "read_only": 1
+  },
+  {
+   "fieldname": "actual_value",
+   "fieldtype": "Float",
+   "label": "Actual",
+   "read_only": 1
+  },
+  {
+   "fieldname": "limit_value",
+   "fieldtype": "Float",
+   "label": "Limit",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_message",
+   "fieldtype": "Section Break"
+  },
+  {
+   "fieldname": "message",
+   "fieldtype": "Small Text",
+   "label": "Message",
+   "read_only": 1
+  },
+  {
+   "fieldname": "delivery",
+   "fieldtype": "Small Text",
+   "label": "Delivery",
+   "read_only": 1
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-30 18:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "K6 Alert",
+ "owner": "Administrator",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "delete": 1,
+   "export": 1,
+   "role": "K6 Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "role": "K6 User"
+  }
+ ],
+ "autoname": "hash",
+ "track_changes": 0
+}

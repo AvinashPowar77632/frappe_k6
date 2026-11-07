@@ -10,15 +10,17 @@ after_install = "frappe_k6.install.after_install"
 add_to_apps_screen = [
     {
         "name": "frappe_k6",
-        "logo": "/assets/frappe_k6/images/k6-logo.png",
+        "logo": "/assets/frappe_k6/images/k6-logo.svg",
         "title": "K6 Monitor",
         "route": "/k6-monitor",
+        "has_permission": "frappe_k6.security.has_k6_access",
     },
     {
         "name": "frappe_k6_api_builder",
-        "logo": "/assets/frappe_k6/images/k6-logo.png",
+        "logo": "/assets/frappe_k6/images/k6-logo.svg",
         "title": "API Builder",
         "route": "/api-builder",
+        "has_permission": "frappe_k6.security.has_k6_access",
     },
 ]
 
@@ -36,6 +38,12 @@ scheduler_events = {
     "daily": [
         "frappe_k6.tasks.cleanup_old_reports",
     ],
+    "cron": {
+        # Grafana Cloud mode: push Frappe metrics every minute (no agent needed)
+        "* * * * *": [
+            "frappe_k6.grafana_cloud.push_system_metrics",
+        ],
+    },
 }
 
 # Apps

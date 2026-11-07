@@ -636,7 +636,7 @@ class K6MonitorPage {
           method: "frappe_k6.api.load_test.stop_load_test",
           args: { run_name: this.activeRun },
           callback: () => {
-            frappe.show_alert({ message: "Test stopped.", indicator: "orange" });
+            frappe.show_alert({ message: "Stop requested; k6 is shutting down.", indicator: "orange" });
             this.activeRun = null;
             $("#k6-active-banner").hide();
             this._fetchConfigs();

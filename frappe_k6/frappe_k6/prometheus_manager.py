@@ -18,6 +18,7 @@ _MON_DIR  = os.path.join(os.path.expanduser("~"), "monitoring")
 _PROM_DIR = os.path.join(_MON_DIR, "prometheus")
 _CFG_PATH = os.path.join(_PROM_DIR, "prometheus.yml")
 _RELOAD_URL = "http://localhost:9090/-/reload"
+_CLOUD_TOKEN_PATH = os.path.join(_PROM_DIR, ".grafana_cloud_token")
 
 
 # ─── Public API ───────────────────────────────────────────────────────────────
@@ -27,11 +28,22 @@ def sync_prometheus_config(doc=None, method=None):
     Rebuild prometheus.yml from all enabled Remote Server records, then
     hot-reload Prometheus.  Safe to call repeatedly.
     Also callable as a Frappe doc_events hook (doc/method args are ignored).
+    Does nothing unless Monitor Settings → Monitoring Mode is "Self-hosted" or "Hybrid".
+    In Hybrid mode everything scraped is also forwarded to Grafana Cloud.
     """
+    if not is_self_hosted():
+        return
     servers = _get_enabled_servers()
-    yml     = _build_prometheus_yml(servers)
+    yml     = _build_prometheus_yml(servers, _cloud_forwarding())
     _write_config(yml)
     _reload_prometheus()
+
+
+def is_self_hosted():
+    try:
+        return frappe.db.get_single_value("Monitor Settings", "monitoring_mode") in ("Self-hosted", "Hybrid")
+    except Exception:
+        return False
 
 
 def get_server_labels():
@@ -58,7 +70,25 @@ def _get_enabled_servers():
     )
 
 
-def _build_prometheus_yml(servers):
+def _cloud_forwarding():
+    """remote_write settings for Hybrid mode, or None. Writes the token to a 0600 file."""
+    from frappe_k6.grafana_cloud import get_config, prom_push_url
+
+    cfg = get_config()
+    if cfg.mode != "Hybrid" or not cfg.prom_url:
+        return None
+    password_file = None
+    if cfg.access_token:
+        os.makedirs(_PROM_DIR, exist_ok=True)
+        fd = os.open(_CLOUD_TOKEN_PATH, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+        with os.fdopen(fd, "w") as f:
+            f.write(cfg.access_token)
+        password_file = _CLOUD_TOKEN_PATH
+    return {"url": prom_push_url(cfg.prom_url), "username": cfg.prom_user,
+            "password_file": password_file, "site": frappe.local.site}
+
+
+def _build_prometheus_yml(servers, cloud=None):
     """
     Build a prometheus.yml that scrapes each remote server's exporters,
     tagging every time-series with  server_name  and  env  labels.
@@ -107,7 +137,8 @@ def _build_prometheus_yml(servers):
         "global:\n"
         "  scrape_interval: 15s\n"
         "  evaluation_interval: 15s\n"
-        "\n"
+        + (f"  external_labels:\n    site: {cloud['site']}\n" if cloud else "")
+        + "\n"
         "scrape_configs:\n"
         "  - job_name: prometheus\n"
         "    static_configs:\n"
@@ -121,6 +152,13 @@ def _build_prometheus_yml(servers):
     yml += _job_block("redis_exporter", redis_targets)
     yml += _job_block("mysqld_exporter", mysql_targets)
     yml += _job_block("postgres_exporter", pg_targets)
+
+    if cloud:
+        yml += f"\nremote_write:\n  - url: {cloud['url']}\n"
+        if cloud["username"] and cloud["password_file"]:
+            yml += (f"    basic_auth:\n"
+                    f"      username: '{cloud['username']}'\n"
+                    f"      password_file: {cloud['password_file']}\n")
 
     return yml
 

@@ -5,7 +5,7 @@
  * ENV vars override (useful for CI/CD):
  *   K6_BASE_URL       - e.g. http://erpv16.com
  *   K6_API_USER       - e.g. Administrator
- *   K6_API_PASSWORD   - e.g. admin
+ *   K6_API_PASSWORD   - required; never stored in site.json
  *   K6_SITE_NAME      - e.g. erpv16.com
  */
 
@@ -31,7 +31,11 @@ export const API_USER =
   __ENV.K6_API_USER || siteConfig.api_user || "Administrator";
 
 export const API_PASSWORD =
-  __ENV.K6_API_PASSWORD || siteConfig.api_password || "admin";
+  __ENV.K6_API_PASSWORD || "";
+
+if (!API_PASSWORD) {
+  throw new Error("Set K6_API_PASSWORD (or pass --password to run_tests.sh); there is no default password.");
+}
 
 export const THRESHOLDS = siteConfig.thresholds || {
   http_req_duration_p95_ms: 2000,

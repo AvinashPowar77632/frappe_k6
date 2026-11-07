@@ -42,7 +42,7 @@ def main():
     parser.add_argument("--site", required=True, help="Site name (e.g. erpv16.com)")
     parser.add_argument("--bench", help="Bench root path (auto-detected if not given)")
     parser.add_argument("--user", default="Administrator", help="Frappe user for API auth")
-    parser.add_argument("--password", default="admin", help="Frappe user password")
+    parser.add_argument("--password", default="", help="Ignored: the password is passed to k6 through K6_API_PASSWORD, not written to disk")
     parser.add_argument("--protocol", default="http", choices=["http", "https"])
     parser.add_argument("--port", default="", help="Port if non-standard (e.g. 8000)")
     args = parser.parse_args()
@@ -77,7 +77,6 @@ def main():
         "site_name": args.site,
         "bench_path": bench_path,
         "api_user": args.user,
-        "api_password": args.password,
         "db_name": site_cfg.get("db_name", ""),
         "frappe_version": 16,
         "thresholds": {

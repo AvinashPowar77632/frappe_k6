@@ -87,7 +87,7 @@
    "options": "Remote Server"
   },
   {
-   "description": "Auto-filled from Remote Server.frappe_url \u2014 override if needed (e.g. http://10.0.0.50:8000)",
+   "description": "Auto-filled from Remote Server.frappe_url — override if needed (e.g. http://10.0.0.50:8000)",
    "fetch_from": "remote_server.frappe_url",
    "fetch_if_empty": 1,
    "fieldname": "target_base_url",
@@ -174,7 +174,7 @@
   }
  ],
  "links": [],
- "modified": "2026-07-05 16:45:07.619250",
+ "modified": "2026-10-30 12:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe K6",
  "name": "Load Test Config",
@@ -189,9 +189,28 @@
    "print": 1,
    "read": 1,
    "report": 1,
-   "role": "System Manager",
    "share": 1,
-   "write": 1
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "K6 Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "role": "K6 User"
   }
  ],
  "row_format": "Dynamic",

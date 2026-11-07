@@ -3,8 +3,11 @@ System metrics API — CPU, Memory, Disk, Network, Redis, DB, Gunicorn
 """
 
 import subprocess
+
 import frappe
 from frappe import _
+
+from frappe_k6.security import check_metrics_access
 
 
 def _safe(fn, default=None):
@@ -14,11 +17,10 @@ def _safe(fn, default=None):
         return default
 
 
-@frappe.whitelist(allow_guest=True)
-def prometheus_metrics():
-    """Return all Frappe/K6 metrics in Prometheus text exposition format.
-
-    Scraped by Prometheus at /api/method/frappe_k6.api.system_metrics.prometheus_metrics.
+def collect_samples():
+    """
+    Frappe/K6 metrics as a list of (name, help, kind, labels, value).
+    Shared by the Prometheus endpoint and the Grafana Cloud push.
     Uses only fast (sub-second) collectors — no supervisorctl calls.
     """
     cpu  = _cpu_metrics()
@@ -34,21 +36,21 @@ def prometheus_metrics():
         if "gunicorn" in (p.info.get("name") or "").lower()
     )}, {"count": 0})
 
-    lines = []
+    samples = []
 
-    def g(name, help_text, value, labels=""):
-        tag = f"{{{labels}}}" if labels else ""
-        lines.append(f"# HELP {name} {help_text}")
-        lines.append(f"# TYPE {name} gauge")
-        lines.append(f"{name}{tag} {value}")
+    def g(name, help_text, value, labels=None, kind="gauge"):
+        samples.append((name, help_text, kind, labels or {}, value))
+
+    def c(name, help_text, value, labels=None):
+        g(name, help_text, value, labels, kind="counter")
 
     # ── CPU ──────────────────────────────────────────────────────────────────
     g("frappe_cpu_percent",       "CPU usage percentage",         cpu.get("percent", 0))
     g("frappe_cpu_count",         "Number of CPU cores",          cpu.get("count", 0))
     load = cpu.get("load_avg", [0, 0, 0])
-    g("frappe_load_average",      "System load average (1m)",     load[0], 'interval="1m"')
-    g("frappe_load_average",      "System load average (5m)",     load[1], 'interval="5m"')
-    g("frappe_load_average",      "System load average (15m)",    load[2], 'interval="15m"')
+    g("frappe_load_average",      "System load average",          load[0], {"interval": "1m"})
+    g("frappe_load_average",      "System load average",          load[1], {"interval": "5m"})
+    g("frappe_load_average",      "System load average",          load[2], {"interval": "15m"})
 
     # ── Memory ───────────────────────────────────────────────────────────────
     g("frappe_memory_used_gb",    "Memory used in GiB",           mem.get("used_gb", 0))
@@ -61,8 +63,8 @@ def prometheus_metrics():
     g("frappe_disk_percent",      "Disk usage percentage",        disk.get("percent", 0))
 
     # ── Network (cumulative MiB) ──────────────────────────────────────────────
-    g("frappe_network_sent_mb",   "Network bytes sent (MiB)",     net.get("bytes_sent_mb", 0))
-    g("frappe_network_recv_mb",   "Network bytes received (MiB)", net.get("bytes_recv_mb", 0))
+    c("frappe_network_sent_mb",   "Network bytes sent (MiB)",     net.get("bytes_sent_mb", 0))
+    c("frappe_network_recv_mb",   "Network bytes received (MiB)", net.get("bytes_recv_mb", 0))
 
     # ── Redis ─────────────────────────────────────────────────────────────────
     g("frappe_redis_connected",   "Redis connection status",
@@ -72,27 +74,48 @@ def prometheus_metrics():
     g("frappe_redis_clients",     "Redis connected clients",      rds.get("connected_clients", 0))
 
     # ── Database ──────────────────────────────────────────────────────────────
-    g("frappe_db_connected",      "MariaDB connection status",
+    g("frappe_db_connected",      "Database connection status",
       1 if db.get("status") == "connected" else 0)
     g("frappe_db_connections",    "Active DB connections",        db.get("connections", 0))
-    g("frappe_db_slow_queries",   "Cumulative slow queries",      db.get("slow_queries", 0))
+    c("frappe_db_slow_queries",   "Cumulative slow queries",      db.get("slow_queries", 0))
 
     # ── Workers ───────────────────────────────────────────────────────────────
     g("frappe_worker_count",      "Frappe/Gunicorn worker count", wrk.get("count", 0))
 
     # ── Queues ────────────────────────────────────────────────────────────────
     for q_name in ("default", "long", "short"):
-        g("frappe_queue_depth", f"RQ queue depth ({q_name})",
-          que.get(q_name, 0), f'queue="{q_name}"')
+        g("frappe_queue_depth", "RQ queue depth", que.get(q_name, 0), {"queue": q_name})
 
     # ── K6 active runs ────────────────────────────────────────────────────────
     try:
         active = frappe.db.count("Load Test Run", {"status": "Running"})
         total  = frappe.db.count("Load Test Run")
         g("frappe_k6_active_runs", "Currently running k6 tests", active)
-        g("frappe_k6_total_runs",  "Total k6 test runs",         total)
+        c("frappe_k6_total_runs",  "Total k6 test runs",         total)
     except Exception:
         pass
+
+    return samples
+
+
+@frappe.whitelist(allow_guest=True)
+def prometheus_metrics():
+    """Return all Frappe/K6 metrics in Prometheus text exposition format.
+
+    Scraped by Prometheus at /api/method/frappe_k6.api.system_metrics.prometheus_metrics.
+    Needs a K6 role session or the `X-Frappe-K6-Token: <frappe_k6_metrics_token>` header.
+    """
+    check_metrics_access()
+
+    lines = []
+    declared = set()
+    for name, help_text, kind, labels, value in collect_samples():
+        if name not in declared:  # HELP/TYPE once per metric family
+            lines.append(f"# HELP {name} {help_text}")
+            lines.append(f"# TYPE {name} {kind}")
+            declared.add(name)
+        tag = ",".join(f'{k}="{v}"' for k, v in labels.items())
+        lines.append(f"{name}{{{tag}}} {value}" if tag else f"{name} {value}")
 
     text = "\n".join(lines) + "\n"
 
@@ -105,7 +128,8 @@ def prometheus_metrics():
 
 @frappe.whitelist(allow_guest=True)
 def get_all_metrics():
-    """Returns all system + infra metrics in a single call."""
+    """Returns all system + infra metrics in a single call (K6 role or metrics token)."""
+    check_metrics_access()
     return {
         "cpu":        _cpu_metrics(),
         "memory":     _memory_metrics(),
@@ -198,6 +222,8 @@ def _redis_metrics():
 
 def _database_metrics():
     try:
+        if frappe.db.db_type == "postgres":
+            return _postgres_metrics()
         status = frappe.db.sql(
             "SHOW GLOBAL STATUS WHERE Variable_name IN "
             "('Threads_connected','Slow_queries','Questions','Connections')",
@@ -220,6 +246,22 @@ def _database_metrics():
         }
     except Exception as e:
         return {"status": "error", "message": str(e)}
+
+
+def _postgres_metrics():
+    connections = frappe.db.sql("SELECT count(*) FROM pg_stat_activity")[0][0]
+    max_connections = frappe.db.sql("SHOW max_connections")[0][0]
+    total_queries = frappe.db.sql(
+        "SELECT coalesce(sum(xact_commit + xact_rollback), 0) FROM pg_stat_database"
+    )[0][0]
+    return {
+        "status":             "connected",
+        "connections":        int(connections),
+        "max_connections":    int(max_connections),
+        "slow_queries":       0,  # needs pg_stat_statements; not assumed to be installed
+        "total_queries":      int(total_queries),
+        "long_query_time_s":  0,
+    }
 
 
 def _gunicorn_metrics():

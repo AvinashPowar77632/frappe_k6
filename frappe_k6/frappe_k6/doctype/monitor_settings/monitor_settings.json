@@ -4,6 +4,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "monitoring_mode",
+  "allowed_target_hosts",
   "site_name",
   "base_url",
   "column_break_a",
@@ -20,11 +22,48 @@
   "loki_url",
   "column_break_c",
   "promtail_url",
+  "section_grafana_cloud",
+  "gc_grafana_url",
+  "gc_service_account_token",
+  "gc_access_policy_token",
+  "gc_folder_uid",
+  "gc_send_k6_native_metrics",
+  "column_break_gc",
+  "gc_prometheus_url",
+  "gc_prometheus_user",
+  "gc_prometheus_datasource_uid",
+  "gc_loki_url",
+  "gc_loki_user",
+  "gc_loki_datasource_uid",
+  "gc_last_sync",
+  "gc_status",
+  "section_alerts",
+  "alert_emails",
+  "slack_webhook_url",
+  "column_break_alerts",
+  "teams_webhook_url",
+  "alert_webhook_url",
+  "section_cloud_rules",
+  "cloud_alert_rules",
   "section_k6",
   "k6_binary_path",
   "k6_reports_dir"
  ],
  "fields": [
+  {
+   "fieldname": "monitoring_mode",
+   "fieldtype": "Select",
+   "label": "Monitoring Mode",
+   "options": "Off\nSelf-hosted\nGrafana Cloud\nHybrid",
+   "default": "Off",
+   "description": "Grafana Cloud: Frappe pushes metrics and events to Grafana Cloud. Hybrid: the local Prometheus stack keeps running and forwards everything to Grafana Cloud (use while migrating). Self-hosted: local stack only. Off: results stay in Frappe."
+  },
+  {
+   "fieldname": "allowed_target_hosts",
+   "fieldtype": "Small Text",
+   "label": "Allowed Target Hosts",
+   "description": "One per line, host or host:port. Private or internal addresses can only be load-tested or called from API Builder if listed here, registered as a Remote Server, or this site itself."
+  },
   {
    "fieldname": "site_name",
    "fieldtype": "Data",
@@ -112,6 +151,140 @@
    "label": "Promtail URL"
   },
   {
+   "fieldname": "section_grafana_cloud",
+   "fieldtype": "Section Break",
+   "label": "Grafana Cloud",
+   "description": "Fill the URL and the two tokens, then use Grafana Cloud → Connect & Migrate. Endpoints and user IDs are discovered from the stack."
+  },
+  {
+   "fieldname": "gc_grafana_url",
+   "fieldtype": "Data",
+   "label": "Grafana Cloud URL",
+   "options": "URL",
+   "description": "e.g. https://yourstack.grafana.net"
+  },
+  {
+   "fieldname": "gc_service_account_token",
+   "fieldtype": "Password",
+   "label": "Grafana Service Account Token",
+   "length": 500,
+   "description": "Service account with the Admin role (dashboards, folders, alerting, annotations, datasources)"
+  },
+  {
+   "fieldname": "gc_access_policy_token",
+   "fieldtype": "Password",
+   "label": "Cloud Access Policy Token",
+   "length": 1000,
+   "description": "Scopes: metrics:write, logs:write"
+  },
+  {
+   "fieldname": "gc_folder_uid",
+   "fieldtype": "Data",
+   "label": "Dashboard Folder UID",
+   "default": "frappe-k6"
+  },
+  {
+   "fieldname": "gc_send_k6_native_metrics",
+   "fieldtype": "Check",
+   "label": "Also send k6 native metrics (k6_*)",
+   "default": "1"
+  },
+  {
+   "fieldname": "column_break_gc",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "gc_prometheus_url",
+   "fieldtype": "Data",
+   "label": "Prometheus URL",
+   "description": "Discovered on connect"
+  },
+  {
+   "fieldname": "gc_prometheus_user",
+   "fieldtype": "Data",
+   "label": "Prometheus User ID"
+  },
+  {
+   "fieldname": "gc_prometheus_datasource_uid",
+   "fieldtype": "Data",
+   "label": "Prometheus Datasource UID"
+  },
+  {
+   "fieldname": "gc_loki_url",
+   "fieldtype": "Data",
+   "label": "Loki URL"
+  },
+  {
+   "fieldname": "gc_loki_user",
+   "fieldtype": "Data",
+   "label": "Loki User ID"
+  },
+  {
+   "fieldname": "gc_loki_datasource_uid",
+   "fieldtype": "Data",
+   "label": "Loki Datasource UID"
+  },
+  {
+   "fieldname": "gc_last_sync",
+   "fieldtype": "Datetime",
+   "label": "Last Sync",
+   "read_only": 1
+  },
+  {
+   "fieldname": "gc_status",
+   "fieldtype": "Small Text",
+   "label": "Status",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_alerts",
+   "fieldtype": "Section Break",
+   "label": "Alerts and Notifications",
+   "description": "Used by Grafana alert rules (as the 'Frappe K6' contact point) and by K6 Alert Rules on finished runs. K6 Managers also get in-app notifications."
+  },
+  {
+   "fieldname": "alert_emails",
+   "fieldtype": "Small Text",
+   "label": "Alert Emails",
+   "description": "One address per line"
+  },
+  {
+   "fieldname": "slack_webhook_url",
+   "fieldtype": "Password",
+   "label": "Slack Webhook URL",
+   "length": 500
+  },
+  {
+   "fieldname": "column_break_alerts",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "teams_webhook_url",
+   "fieldtype": "Password",
+   "label": "Microsoft Teams Webhook URL",
+   "length": 500
+  },
+  {
+   "fieldname": "alert_webhook_url",
+   "fieldtype": "Password",
+   "label": "Generic Webhook URL",
+   "length": 500,
+   "description": "Receives the alert as JSON"
+  },
+  {
+   "fieldname": "section_cloud_rules",
+   "fieldtype": "Section Break",
+   "label": "Grafana Alert Rules",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "cloud_alert_rules",
+   "fieldtype": "Table",
+   "label": "Grafana Alert Rules",
+   "options": "K6 Cloud Alert Rule",
+   "description": "Synced to Grafana Cloud by Connect & Migrate or Sync Alert Rules"
+  },
+  {
    "fieldname": "section_k6",
    "fieldtype": "Section Break",
    "label": "k6 Settings"
@@ -130,16 +303,27 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-06-28 17:50:13.644115",
+ "modified": "2026-10-30 18:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe K6",
  "name": "Monitor Settings",
  "owner": "Administrator",
  "permissions": [
   {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
    "read": 1,
-   "role": "System Manager",
-   "write": 1
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "read": 1,
+   "role": "K6 Manager"
   }
  ],
  "row_format": "Dynamic",

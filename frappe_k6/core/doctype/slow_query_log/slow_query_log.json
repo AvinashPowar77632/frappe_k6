@@ -1,0 +1,62 @@
+{
+ "actions": [],
+ "creation": "2026-11-07 12:00:00",
+ "doctype": "DocType",
+ "document_type": "System",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "query_text",
+  "execution_time",
+  "seen"
+ ],
+ "fields": [
+  {
+   "default": "",
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "label": "Timestamp"
+  },
+  {
+   "fieldname": "query_text",
+   "fieldtype": "Long Text",
+   "label": "Query Text"
+  },
+  {
+   "default": "0.00",
+   "fieldname": "execution_time",
+   "fieldtype": "Float",
+   "label": "Execution Time (seconds)"
+  },
+  {
+   "default": "0",
+   "fieldname": "seen",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Seen"
+  }
+ ],
+ "icon": "fa fa-hourglass",
+ "idx": 1,
+ "in_create": 1,
+ "links": [],
+ "module": "frappe_k6",
+ "name": "Slow Query Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "sort_field": "modified",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "query_text"
+}

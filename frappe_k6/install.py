@@ -1,19 +1,28 @@
 """
-frappe_k6 — plug-and-play install
-Automatically sets up k6, node_exporter, Prometheus, Grafana, Monitor Settings,
-and sample Load Test Configs when the app is installed on any Frappe site.
+frappe_k6 installation.
+
+`after_install` only touches the database and site config: roles, Monitor Settings,
+a metrics token and sample configs. It needs no sudo and no network, so
+`bench install-app frappe_k6` works on any bench.
+
+Host-level setup is opt-in, through bench commands (see frappe_k6/commands.py):
+  bench frappe-k6 install-k6                  # static k6 binary into <bench>/env/bin, no sudo
+  bench --site X frappe-k6 setup-local-stack  # Prometheus, Loki, Grafana (needs sudo + systemd)
 """
 
-import os
+import getpass
+import hashlib
 import json
+import os
+import platform
 import shutil
 import socket
 import subprocess
 import sys
 import tarfile
-import zipfile
-import urllib.request
 import urllib.parse
+import urllib.request
+import zipfile
 
 import frappe
 
@@ -33,6 +42,9 @@ _PROM_VER      = "2.52.0"
 _NODE_EXP_VER  = "1.8.1"
 _LOKI_VER      = "2.9.10"
 _PROMTAIL_VER  = "2.9.10"
+_K6_VER        = "2.3.0"
+
+_TOKEN_FILE    = os.path.join(_MON_DIR, ".frappe_k6_metrics_token")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -40,20 +52,49 @@ _PROMTAIL_VER  = "2.9.10"
 # ─────────────────────────────────────────────────────────────────────────────
 
 def after_install():
-    """Full plug-and-play setup — called automatically by Frappe after install."""
-    _log("=" * 62)
-    _log("frappe_k6 — Auto-Setup Starting")
-    _log("=" * 62)
+    """Database-only setup — called automatically by Frappe after install."""
+    from frappe_k6.security import ensure_roles
 
+    ensure_roles()
+    _setup_slow_query_log()
+    _setup_reports_dir()
+    try:
+        from frappe_k6.alerts import ensure_default_rules
+
+        ensure_default_rules()
+    except Exception as exc:
+        _log(f"default alert rules skipped: {exc}")
+    _configure_basic_settings()
+    ensure_metrics_token()
+    try:
+        _create_sample_configs()
+    except Exception as exc:
+        _log(f"sample configs skipped: {exc}")
+    frappe.db.commit()
+
+    k6 = shutil.which("k6")
+    _log("frappe_k6 installed.")
+    _log(f"  k6 binary : {k6 or 'not found — run: bench frappe-k6 install-k6'}")
+    _log("  Check     : bench frappe-k6 doctor")
+    _log(f"  Optional  : bench --site {frappe.local.site} frappe-k6 setup-local-stack")
+    _log("  Grant the 'K6 Manager' or 'K6 User' role to users who need access.")
+
+
+def setup_local_stack(skip=()):
+    """
+    Install and start the self-hosted monitoring stack (node_exporter, Prometheus,
+    the frappe_k6 exporter, Loki, Promtail, Grafana). Needs sudo, systemd and internet.
+    `skip` holds step names (case-insensitive) to leave out.
+    """
     server_ip = _detect_server_ip()
     port      = frappe.get_site_config().get("webserver_port", 8000)
+    skip      = {name.lower() for name in skip}
 
     steps = [
-        ("Directories",             lambda: _setup_directories()),
-        ("Monitor Settings",        lambda: _configure_monitor_settings(server_ip, port)),
+        ("Directories",             lambda: _setup_monitoring_directories()),
+        ("Monitor Settings",        lambda: _configure_stack_settings(server_ip)),
         ("Register Local Server",   lambda: _register_local_server(server_ip)),
-        ("Sample Load Test Configs",lambda: _create_sample_configs()),
-        ("k6",                      lambda: _install_k6()),
+        ("k6",                      lambda: install_k6_binary()),
         ("node_exporter",           lambda: _setup_node_exporter()),
         ("Prometheus",              lambda: _setup_prometheus(server_ip, port)),
         ("K6 Exporter",             lambda: _setup_k6_exporter(server_ip, port)),
@@ -64,40 +105,56 @@ def after_install():
 
     results = {}
     for name, fn in steps:
+        if name.lower() in skip:
+            results[name] = "skipped"
+            continue
         try:
             _log(f"  → {name} ...")
             fn()
-            results[name] = "✅"
+            results[name] = "ok"
         except Exception as exc:
-            results[name] = f"⚠️  {exc}"
-            _log(f"     ⚠️  {exc}")
+            results[name] = f"FAILED: {exc}"
+            _log(f"     FAILED: {exc}")
 
-    try:
-        frappe.db.commit()
-    except Exception:
-        pass
+    frappe.db.commit()
 
     _log("=" * 62)
     _log("Setup summary:")
     for name, status in results.items():
-        _log(f"  {status}  {name}")
+        _log(f"  {name:<24} {status}")
     _log("─" * 62)
     _log(f"  K6 Dashboard : http://{server_ip}:{port}/k6-monitor")
-    _log(f"  Grafana      : http://{server_ip}:3000  (admin / admin)")
+    _log(f"  Grafana      : http://{server_ip}:3000")
     _log(f"  Prometheus   : http://{server_ip}:9090")
-    _log(f"  Loki         : http://{server_ip}:3100")
-    _log(f"  Promtail     : http://{server_ip}:9080/metrics")
     _log("=" * 62)
+    return results
+
+
+def ensure_metrics_token():
+    """Create the bearer token that Prometheus scrapers use for the metrics endpoints."""
+    from frappe.installer import update_site_config
+
+    token = frappe.conf.get("frappe_k6_metrics_token")
+    if not token:
+        token = frappe.generate_hash(length=40)
+        update_site_config("frappe_k6_metrics_token", token)
+        frappe.conf.frappe_k6_metrics_token = token
+    return token
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Step 1 — Directories
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _setup_directories():
+def _setup_reports_dir():
     reports_dir = os.path.join(_APP_ROOT, "k6_tests", "reports")
+    os.makedirs(reports_dir, exist_ok=True)
+    return reports_dir
+
+
+def _setup_monitoring_directories():
     for d in [
-        reports_dir, _MON_DIR, _PROM_DIR, _NODE_DIR,
+        _MON_DIR, _PROM_DIR, _NODE_DIR,
         os.path.join(_PROM_DIR, "data"),
         _LOKI_DIR,
         os.path.join(_LOKI_DIR, "chunks"),
@@ -108,48 +165,73 @@ def _setup_directories():
         _PROMTAIL_DIR,
     ]:
         os.makedirs(d, exist_ok=True)
-    _log(f"     reports → {reports_dir}")
-    _log(f"     loki    → {_LOKI_DIR}")
-    _log(f"     promtail→ {_PROMTAIL_DIR}")
+    _log(f"     monitoring → {_MON_DIR}")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 #  Step 2 — Monitor Settings
 # ─────────────────────────────────────────────────────────────────────────────
 
-def _configure_monitor_settings(server_ip, port):
-    reports_dir = os.path.join(_APP_ROOT, "k6_tests", "reports")
+def _configure_basic_settings():
+    """Defaults that need no host access. Existing values are kept."""
     s = frappe.get_single("Monitor Settings")
-    s.site_name        = frappe.local.site
-    s.base_url         = f"http://{server_ip}:{port}"
-    s.k6_reports_dir   = reports_dir
-    s.k6_binary_path   = shutil.which("k6") or "k6"
+    s.site_name      = s.site_name or frappe.local.site
+    s.base_url       = s.base_url or frappe.utils.get_url()
+    s.k6_reports_dir = s.k6_reports_dir or _setup_reports_dir()
+    s.k6_binary_path = s.k6_binary_path or shutil.which("k6") or "k6"
+    s.monitoring_mode = s.monitoring_mode or "Off"
+    s.refresh_interval = s.refresh_interval or 5
+    from frappe_k6.grafana_cloud import ensure_default_cloud_rules
+
+    ensure_default_cloud_rules(s)
+    s.save(ignore_permissions=True)
+
+
+def _setup_slow_query_log():
+    """
+    Set up Slow Query Log doctype and default settings.
+    """
+    # Ensure Slow Query Log doctype exists
+    if not frappe.db.exists("DocType", "Slow Query Log"):
+        frappe.get_doc({
+            "doctype": "DocType",
+            "module": "frappe_k6",
+            "name": "Slow Query Log",
+            "document_type": "System",
+            "engine": "InnoDB",
+            "fields": [
+                {"fieldname": "timestamp", "fieldtype": "Datetime", "label": "Timestamp"},
+                {"fieldname": "query_text", "fieldtype": "Long Text", "label": "Query Text"},
+                {"fieldname": "execution_time", "fieldtype": "Float", "label": "Execution Time (seconds)", "default": "0.00"},
+                {"fieldname": "seen", "fieldtype": "Check", "label": "Seen", "default": "0", "hidden": 1},
+            ],
+            "icon": "fa fa-hourglass",
+            "module": "frappe_k6",
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+
+    # Set default for enable_slow_query_logging if not already set
+    if not frappe.db.exists("System Settings", "enable_slow_query_logging"):
+        frappe.get_doc({
+            "doctype": "System Settings",
+            "enable_slow_query_logging": 1,
+        }).insert(ignore_permissions=True)
+        frappe.db.commit()
+
+
+def _configure_stack_settings(server_ip):
+    s = frappe.get_single("Monitor Settings")
+    s.monitoring_mode  = "Self-hosted"
     s.grafana_enabled  = 1
     s.grafana_url      = f"http://{server_ip}:3000"
     s.prometheus_enabled = 1
     s.prometheus_url   = f"http://{server_ip}:9090"
-    s.refresh_interval = 5
-    try:
-        s.loki_enabled = 1
-        s.loki_url     = f"http://{server_ip}:3100"
-        s.promtail_url = f"http://{server_ip}:9080"
-    except Exception:
-        pass
+    s.loki_enabled     = 1
+    s.loki_url         = f"http://{server_ip}:3100"
+    s.promtail_url     = f"http://{server_ip}:9080"
     s.save(ignore_permissions=True)
     frappe.db.commit()
-    # Store Grafana password hint in site config for API auth during re-installs
-    try:
-        site_cfg_path = os.path.join(_BENCH_DIR, "sites", frappe.local.site, "site_config.json")
-        if os.path.isfile(site_cfg_path):
-            with open(site_cfg_path) as f:
-                site_cfg = json.load(f)
-            if "grafana_admin_password" not in site_cfg:
-                site_cfg["grafana_admin_password"] = "admin"
-                with open(site_cfg_path, "w") as f:
-                    json.dump(site_cfg, f, indent=1)
-    except Exception:
-        pass
-    _log(f"     site={frappe.local.site}  base_url={s.base_url}")
+    _log(f"     site={frappe.local.site}  mode=Self-hosted")
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -204,32 +286,57 @@ def _create_sample_configs():
 #  Step 4 — k6
 # ─────────────────────────────────────────────────────────────────────────────
 
+def install_k6_binary(version=_K6_VER, dest_dir=None, force=False):
+    """
+    Download the official static k6 release for this OS/CPU, verify its SHA-256
+    against the release checksums, and install it into <bench>/env/bin. No sudo.
+    """
+    existing = shutil.which("k6")
+    if existing and not force:
+        _log(f"     already installed: {existing}")
+        return existing
+
+    machine = platform.machine().lower()
+    arch = {"x86_64": "amd64", "amd64": "amd64", "aarch64": "arm64", "arm64": "arm64"}.get(machine)
+    if platform.system() != "Linux" or not arch:
+        raise RuntimeError(f"No k6 build for {platform.system()} {machine}; install it manually.")
+
+    base = f"https://github.com/grafana/k6/releases/download/v{version}"
+    asset = f"k6-v{version}-linux-{arch}.tar.gz"
+    dest_dir = dest_dir or os.path.join(_BENCH_DIR, "env", "bin")
+    os.makedirs(dest_dir, exist_ok=True)
+
+    with urllib.request.urlopen(f"{base}/k6-v{version}-checksums.txt", timeout=60) as r:
+        checksums = dict(
+            reversed(line.split()) for line in r.read().decode().splitlines() if line.strip()
+        )
+    if asset not in checksums:
+        raise RuntimeError(f"{asset} is not listed in the v{version} checksums")
+
+    with urllib.request.urlopen(f"{base}/{asset}", timeout=300) as r:
+        payload = r.read()
+    if hashlib.sha256(payload).hexdigest() != checksums[asset]:
+        raise RuntimeError(f"Checksum mismatch for {asset}")
+
+    import io
+
+    member = f"k6-v{version}-linux-{arch}/k6"
+    with tarfile.open(fileobj=io.BytesIO(payload), mode="r:gz") as tf:
+        data = tf.extractfile(member).read()
+    target = os.path.join(dest_dir, "k6")
+    with open(target, "wb") as f:
+        f.write(data)
+    os.chmod(target, 0o755)
+    _log(f"     k6 v{version} installed: {target}")
+
+    if frappe.db and frappe.db.exists("DocType", "Monitor Settings"):
+        frappe.db.set_single_value("Monitor Settings", "k6_binary_path", target)
+    return target
+
+
 def _install_k6():
-    if shutil.which("k6"):
-        _log("     already installed: " + _run_cmd(["k6", "version"])[1].split("\n")[0])
-        return
-
-    if not shutil.which("apt-get"):
-        raise RuntimeError("apt-get not found — install k6 manually from https://k6.io/docs/get-started/installation/")
-
-    _log("     installing k6 via APT …")
-    keyrings = "/etc/apt/keyrings"
-    _run_sudo(["mkdir", "-p", keyrings])
-    rc, _, err = _run_cmd(
-        "curl -fsSL https://dl.k6.io/key.gpg | sudo gpg --batch --yes --dearmor "
-        f"-o {keyrings}/k6-archive-keyring.gpg",
-        shell=True
-    )
-    if rc != 0:
-        raise RuntimeError(f"GPG key import failed: {err}")
-    _run_sudo(["bash", "-c",
-        f"echo 'deb [signed-by={keyrings}/k6-archive-keyring.gpg] "
-        "https://dl.k6.io/deb stable main' > /etc/apt/sources.list.d/k6.list"])
-    _run_sudo(["apt-get", "update", "-qq"])
-    rc, _, err = _run_sudo(["apt-get", "install", "-y", "k6"])
-    if rc != 0:
-        raise RuntimeError(f"apt-get install k6 failed: {err}")
-    _log("     k6 installed: " + (_run_cmd(["k6", "version"])[1].split("\n")[0]))
+    """Kept for older docs that call it through `bench execute`."""
+    return install_k6_binary()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -253,7 +360,7 @@ Description=Prometheus Node Exporter
 After=network.target
 
 [Service]
-User={os.environ.get('USER', 'erpadmin')}
+User={getpass.getuser()}
 ExecStart={binary} --web.listen-address=0.0.0.0:9100
 Restart=on-failure
 RestartSec=5s
@@ -309,7 +416,7 @@ scrape_configs:
 
     svc_name = "prometheus"
     if not _service_active(svc_name):
-        user = os.environ.get("USER", "erpadmin")
+        user = getpass.getuser()
         svc_content = f"""[Unit]
 Description=Prometheus Monitoring
 After=network.target
@@ -345,9 +452,17 @@ def _setup_k6_exporter(server_ip, port):
     shutil.copy2(exporter_src, exporter_dst)
     os.chmod(exporter_dst, 0o755)
 
+    # The exporter authenticates to Frappe with this token (file readable by the bench user only)
+    token = ensure_metrics_token()
+    fd = os.open(_TOKEN_FILE, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
+    with os.fdopen(fd, "w") as f:
+        f.write(token)
+
     svc_name = "frappe_k6_exporter"
-    if not _service_active(svc_name):
-        user    = os.environ.get("USER", "erpadmin")
+    if _service_active(svc_name):
+        _run_sudo(["systemctl", "restart", svc_name])  # pick up the new exporter code
+    else:
+        user    = getpass.getuser()
         python  = sys.executable
         base_url = f"http://{server_ip}:{port}"
         svc_content = f"""[Unit]
@@ -429,7 +544,7 @@ analytics:
 
     svc_name = "loki"
     if not _service_active(svc_name):
-        user = os.environ.get("USER", "erpadmin")
+        user = getpass.getuser()
         svc_content = f"""[Unit]
 Description=Grafana Loki Log Aggregation
 After=network.target
@@ -488,7 +603,7 @@ clients:
 
     svc_name = "promtail"
     if not _service_active(svc_name):
-        user = os.environ.get("USER", "erpadmin")
+        user = getpass.getuser()
         svc_content = f"""[Unit]
 Description=Grafana Promtail Log Collector
 After=network.target loki.service
@@ -523,8 +638,12 @@ def _build_promtail_scrape_configs():
         "    pipeline_stages:\n"
         "      - regex:\n"
         "          expression: '.*(?P<level>DEBUG|INFO|WARNING|ERROR|CRITICAL).*'\n"
+        "      - regex:\n"
+        "          expression: '.*(?P<query_time>Query_time:\\s+[\\d.]+)'\n"
         "      - labels:\n"
         "          level:\n"
+        "      - labels:\n"
+        "          query_time:\n"
     )
 
     def job_block(job_name, path, labels, pipeline="", check_path=None):
@@ -762,7 +881,8 @@ providers:
 
     # Trigger Grafana to reload provisioned dashboards (non-destructive)
     try:
-        import urllib.request as ur, base64
+        import base64
+        import urllib.request as ur
         auth = _grafana_auth_header()
         if auth:
             req = ur.Request("http://localhost:3000/api/admin/provisioning/dashboards/reload",
@@ -774,10 +894,10 @@ providers:
 
 def _import_dashboard_via_api():
     """Wait for Grafana to be ready, then import all dashboard JSON files via API."""
-    import time
-    import urllib.request as ur
-    import urllib.error
     import base64
+    import time
+    import urllib.error
+    import urllib.request as ur
 
     _all_dashboards = [
         "frappe_k6_dashboard.json",
@@ -795,20 +915,12 @@ def _import_dashboard_via_api():
     dashboard_src = dashboard_files[0]  # used below for auth check
 
     grafana_url = "http://localhost:3000"
-    # Try default password first, then common changed passwords
-    passwords = ["admin", "Admin@123", "admin123", "grafana"]
     headers = {"Content-Type": "application/json"}
-    for pwd in passwords:
-        creds = base64.b64encode(f"admin:{pwd}".encode()).decode()
-        try:
-            test_req = ur.Request(f"{grafana_url}/api/org",
-                headers={"Authorization": f"Basic {creds}"})
-            with ur.urlopen(test_req, timeout=3) as r:
-                if r.status == 200:
-                    headers["Authorization"] = f"Basic {creds}"
-                    break
-        except Exception:
-            continue
+    auth = _grafana_auth_header()
+    if not auth:
+        _log("     ⚠ Grafana credentials not configured or rejected — dashboard import skipped")
+        return
+    headers["Authorization"] = auth
 
     # Wait up to 20 s for Grafana to respond
     for _ in range(10):
@@ -844,31 +956,29 @@ def _import_dashboard_via_api():
 
 def _grafana_auth_header():
     """
-    Return a Basic-auth header value for the Grafana admin user.
-    Tries the site config password, then a list of common defaults.
-    Returns None if Grafana is unreachable.
+    Authorization header for the local Grafana, from site config only:
+    `grafana_api_token` (service account token, preferred) or `grafana_admin_password`.
+    Returns None if neither is set or Grafana rejects it. Passwords are never guessed.
     """
     import base64
     import urllib.request as ur
 
-    grafana_url = "http://localhost:3000"
-    # Try passwords from site config first, then common defaults
-    stored = frappe.conf.get("grafana_admin_password", "")
-    candidates = ([stored] if stored else []) + [
-        "admin", "Admin@123", "admin123", "grafana",
-        "Avinash@77632", "Admin@k6",
-    ]
-    for pwd in candidates:
-        creds = base64.b64encode(f"admin:{pwd}".encode()).decode()
-        auth  = f"Basic {creds}"
-        try:
-            req = ur.Request(f"{grafana_url}/api/org",
-                             headers={"Authorization": auth})
-            with ur.urlopen(req, timeout=4) as r:
-                if r.status == 200:
-                    return auth
-        except Exception:
-            continue
+    token = frappe.conf.get("grafana_api_token")
+    password = frappe.conf.get("grafana_admin_password")
+    if token:
+        auth = f"Bearer {token}"
+    elif password:
+        auth = "Basic " + base64.b64encode(f"admin:{password}".encode()).decode()
+    else:
+        return None
+
+    try:
+        req = ur.Request("http://localhost:3000/api/org", headers={"Authorization": auth})
+        with ur.urlopen(req, timeout=4) as r:
+            if r.status == 200:
+                return auth
+    except Exception:
+        pass
     return None
 
 
@@ -878,8 +988,8 @@ def _ensure_grafana_datasources_via_api():
     if they do not already exist.  Works on Grafana 9, 10, 11, 12.
     """
     import base64
-    import urllib.request as ur
     import urllib.error
+    import urllib.request as ur
 
     grafana_url = "http://localhost:3000"
     auth = _grafana_auth_header()

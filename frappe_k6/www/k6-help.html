@@ -550,7 +550,7 @@ frappe_redis_connected</code></pre>
 <h3>K6 not found / test won't start</h3>
 <ol>
   <li><code>which k6</code> — if empty, K6 is not on PATH.</li>
-  <li>Re-run installer: <code>bench --site &lt;site&gt; execute frappe_k6.install._install_k6</code></li>
+  <li>Install the static binary (no sudo): <code>bench frappe-k6 install-k6</code>, then check with <code>bench --site &lt;site&gt; frappe-k6 doctor</code></li>
   <li>Or install manually: <a href="https://k6.io/docs/get-started/installation/" target="_blank">k6.io/docs/get-started/installation</a></li>
   <li>After installing, update the <strong>K6 Binary Path</strong> in Monitor Settings to the full path returned by <code>which k6</code>.</li>
 </ol>

@@ -5,17 +5,29 @@
  "editable_grid": 1,
  "engine": "InnoDB",
  "field_order": [
-  "api_name", "http_method", "endpoint_url", "expected_status",
+  "api_name",
+  "http_method",
+  "endpoint_url",
+  "expected_status",
   "column_break_a",
-  "auth_type", "auth_value",
+  "auth_type",
+  "auth_value",
   "section_payload",
-  "headers", "query_params",
+  "headers",
+  "query_params",
   "column_break_b",
   "payload",
   "weight"
  ],
  "fields": [
-  {"fieldname": "api_name", "fieldtype": "Data", "label": "API Name", "reqd": 1, "in_list_view": 1, "bold": 1},
+  {
+   "fieldname": "api_name",
+   "fieldtype": "Data",
+   "label": "API Name",
+   "reqd": 1,
+   "in_list_view": 1,
+   "bold": 1
+  },
   {
    "fieldname": "http_method",
    "fieldtype": "Select",
@@ -26,27 +38,80 @@
    "in_list_view": 1,
    "columns": 1
   },
-  {"fieldname": "endpoint_url", "fieldtype": "Data", "label": "Endpoint URL", "reqd": 1, "in_list_view": 1},
-  {"fieldname": "expected_status", "fieldtype": "Int", "label": "Expected Status", "default": 200, "in_list_view": 1, "columns": 1},
-  {"fieldname": "column_break_a", "fieldtype": "Column Break"},
+  {
+   "fieldname": "endpoint_url",
+   "fieldtype": "Data",
+   "label": "Endpoint URL",
+   "reqd": 1,
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "expected_status",
+   "fieldtype": "Int",
+   "label": "Expected Status",
+   "default": 200,
+   "in_list_view": 1,
+   "columns": 1
+  },
+  {
+   "fieldname": "column_break_a",
+   "fieldtype": "Column Break"
+  },
   {
    "fieldname": "auth_type",
    "fieldtype": "Select",
    "label": "Auth Type",
    "options": "None\nSession (Frappe Login)\nBearer Token\nBasic Auth\nAPI Key\nCustom Header",
-   "default": "Session (Frappe Login)"
+   "default": "None"
   },
-  {"fieldname": "auth_value", "fieldtype": "Small Text", "label": "Auth Value / Credentials", "description": "Bearer: token | Basic: user:pass | API Key: key:secret | Session: user:pass"},
-  {"fieldname": "section_payload", "fieldtype": "Section Break", "label": "Request Details", "collapsible": 1},
-  {"fieldname": "headers", "fieldtype": "Code", "label": "Extra Headers (JSON)", "options": "JSON", "description": "{\"X-Custom\": \"value\"}"},
-  {"fieldname": "query_params", "fieldtype": "Code", "label": "Query Params (JSON)", "options": "JSON", "description": "{\"limit\": 10}"},
-  {"fieldname": "column_break_b", "fieldtype": "Column Break"},
-  {"fieldname": "payload", "fieldtype": "Code", "label": "Request Body (JSON)", "options": "JSON"},
-  {"fieldname": "weight", "fieldtype": "Int", "label": "Weight (%)", "default": 100, "description": "Relative traffic weight for this endpoint"}
+  {
+   "fieldname": "auth_value",
+   "fieldtype": "Password",
+   "label": "Auth Value / Credentials",
+   "description": "Stored encrypted. Bearer: token | Basic: user:pass | API Key: key:secret | Session: user:pass",
+   "length": 1000
+  },
+  {
+   "fieldname": "section_payload",
+   "fieldtype": "Section Break",
+   "label": "Request Details",
+   "collapsible": 1
+  },
+  {
+   "fieldname": "headers",
+   "fieldtype": "Code",
+   "label": "Extra Headers (JSON)",
+   "options": "JSON",
+   "description": "{\"X-Custom\": \"value\"}"
+  },
+  {
+   "fieldname": "query_params",
+   "fieldtype": "Code",
+   "label": "Query Params (JSON)",
+   "options": "JSON",
+   "description": "{\"limit\": 10}"
+  },
+  {
+   "fieldname": "column_break_b",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "payload",
+   "fieldtype": "Code",
+   "label": "Request Body (JSON)",
+   "options": "JSON"
+  },
+  {
+   "fieldname": "weight",
+   "fieldtype": "Int",
+   "label": "Weight (%)",
+   "default": 100,
+   "description": "Relative traffic weight for this endpoint"
+  }
  ],
  "istable": 1,
  "links": [],
- "modified": "2024-06-26 00:00:00.000000",
+ "modified": "2026-10-30 12:30:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe K6",
  "name": "Load Test Endpoint",

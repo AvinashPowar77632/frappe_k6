@@ -62,7 +62,7 @@ frappe.ui.form.on("Load Test Config", {
                 const { run_name } = r.message;
 
                 frappe.show_alert({
-                    message: __("✅ Test started — Run: ") + run_name,
+                    message: __("Test queued — Run: ") + run_name,
                     indicator: "green",
                 }, 5);
 
@@ -71,7 +71,7 @@ frappe.ui.form.on("Load Test Config", {
                 /* auto-navigate to dashboard after short delay */
                 setTimeout(() => {
                     frappe.confirm(
-                        __("Test is running. Open the K6 Dashboard to see live metrics?"),
+                        __("Test queued and starting. Open the K6 Dashboard to see live metrics?"),
                         () => window.open("/k6-monitor", "_blank"),
                     );
                 }, 1500);
@@ -96,7 +96,7 @@ frappe.ui.form.on("Load Test Config", {
                 method: "frappe_k6.api.load_test.stop_load_test",
                 args: { run_name: frm.doc.last_run },
                 callback() {
-                    frappe.show_alert({ message: __("Test stopped."), indicator: "orange" }, 4);
+                    frappe.show_alert({ message: __("Stop requested; k6 is shutting down."), indicator: "orange" }, 4);
                     frm.reload_doc();
                 },
             });
@@ -117,7 +117,8 @@ frappe.ui.form.on("Load Test Config", {
                     title: __("Live Status — ") + frm.doc.last_run,
                     message: `
                         <table class="table table-bordered" style="margin:0">
-                          <tr><th>Running</th><td>${s.is_running ? "Yes ●" : "No"}</td></tr>
+                          <tr><th>Status</th><td>${s.status}</td></tr>
+                          <tr><th>Thresholds</th><td>${s.threshold_result || "Unknown"}</td></tr>
                           <tr><th>Requests</th><td>${(m.http_reqs || {}).count || 0}</td></tr>
                           <tr><th>RPS</th><td>${(m.rps || 0).toFixed(2)}</td></tr>
                           <tr><th>Avg Latency</th><td>${(dur.avg || 0).toFixed(0)} ms</td></tr>
@@ -139,7 +140,7 @@ frappe.ui.form.on("Load Test Config", {
         const badge = frm.doc.last_run_status;
         if (!badge) return;
         const color = {
-            Completed: "green", Running: "blue",
+            Completed: "green", Running: "blue", Queued: "blue",
             Failed: "red", Stopped: "orange",
         }[badge] || "gray";
         wrapper.find(".control-value").html(

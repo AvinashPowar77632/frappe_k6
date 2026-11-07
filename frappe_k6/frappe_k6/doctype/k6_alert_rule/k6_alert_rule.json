@@ -1,0 +1,140 @@
+{
+ "actions": [],
+ "creation": "2026-10-30 18:00:00.000000",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "rule_name",
+  "enabled",
+  "load_test_config",
+  "column_break_1",
+  "metric",
+  "operator",
+  "value",
+  "section_baseline",
+  "compare_to_baseline",
+  "baseline_runs",
+  "severity"
+ ],
+ "fields": [
+  {
+   "fieldname": "rule_name",
+   "fieldtype": "Data",
+   "label": "Rule Name",
+   "reqd": 1,
+   "unique": 1
+  },
+  {
+   "fieldname": "enabled",
+   "fieldtype": "Check",
+   "label": "Enabled",
+   "default": "1",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "load_test_config",
+   "fieldtype": "Link",
+   "label": "Load Test Config",
+   "options": "Load Test Config",
+   "description": "Leave empty to apply to every config",
+   "in_list_view": 1
+  },
+  {
+   "fieldname": "column_break_1",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "metric",
+   "fieldtype": "Select",
+   "label": "Metric",
+   "reqd": 1,
+   "in_list_view": 1,
+   "options": "P95 latency (ms)\nP99 latency (ms)\nAverage latency (ms)\nError rate (%)\nRequests per second\nThresholds failed\nRun failed",
+   "description": "Run failed means k6 errored or crashed; failed thresholds are reported by Thresholds failed"
+  },
+  {
+   "fieldname": "operator",
+   "fieldtype": "Select",
+   "label": "Operator",
+   "options": ">\n>=\n<\n<=",
+   "default": ">"
+  },
+  {
+   "fieldname": "value",
+   "fieldtype": "Float",
+   "label": "Value",
+   "in_list_view": 1,
+   "description": "Thresholds failed / Run failed: use > 0. With baseline comparison: percent worse than the baseline"
+  },
+  {
+   "fieldname": "section_baseline",
+   "fieldtype": "Section Break",
+   "label": "Regression"
+  },
+  {
+   "fieldname": "compare_to_baseline",
+   "fieldtype": "Check",
+   "label": "Compare to Baseline",
+   "description": "Fire when this run is more than Value % worse than the average of the previous runs of the same config"
+  },
+  {
+   "fieldname": "baseline_runs",
+   "fieldtype": "Int",
+   "label": "Baseline Runs",
+   "default": "5",
+   "depends_on": "compare_to_baseline"
+  },
+  {
+   "fieldname": "severity",
+   "fieldtype": "Select",
+   "label": "Severity",
+   "options": "critical\nwarning\ninfo",
+   "default": "warning"
+  }
+ ],
+ "links": [],
+ "modified": "2026-10-30 18:30:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "K6 Alert Rule",
+ "owner": "Administrator",
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": [],
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "System Manager"
+  },
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "share": 1,
+   "write": 1,
+   "role": "K6 Manager"
+  },
+  {
+   "read": 1,
+   "report": 1,
+   "print": 1,
+   "export": 1,
+   "role": "K6 User"
+  }
+ ],
+ "autoname": "field:rule_name",
+ "title_field": "rule_name"
+}

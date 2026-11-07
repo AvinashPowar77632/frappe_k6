@@ -2,31 +2,37 @@
 Scheduled background tasks for frappe_k6.
 """
 
-import os
 import glob
+import os
+
 import frappe
 from frappe.utils import now_datetime
 
 
 def sync_running_tests():
     """
-    Periodically check all 'Running' Load Test Runs.
-    If the k6 process is dead, finalize the record.
+    Recover runs whose runner job died: a 'Running' Load Test Run with no
+    runner heartbeat, and (on the runner host) no live k6 process, is finalised.
     """
-    from frappe_k6.api.load_test import _is_process_running, _parse_k6_output, _finalize_run
+    import socket
+
+    from frappe_k6.api.load_test import _finalize_run, _heartbeat_key, _is_process_running
 
     runs = frappe.get_all(
         "Load Test Run",
         filters={"status": "Running"},
-        fields=["name", "pid", "output_file", "config"]
+        fields=["name", "pid", "runner_host"]
     )
 
+    cache = frappe.cache()
     for run_data in runs:
         try:
-            run = frappe.get_doc("Load Test Run", run_data["name"])
-            if not _is_process_running(run.pid):
-                metrics = _parse_k6_output(run.output_file)
-                _finalize_run(run, metrics)
+            if cache.get_value(_heartbeat_key(run_data["name"])):
+                continue  # the runner job is alive and will finalise the run itself
+            on_this_host = run_data["runner_host"] == socket.gethostname()
+            if on_this_host and _is_process_running(run_data["pid"]):
+                continue  # k6 still running without its job; finalise when it exits
+            _finalize_run(run_data["name"])
         except Exception as e:
             frappe.log_error(str(e), f"sync_running_tests: {run_data['name']}")
 
@@ -45,7 +51,7 @@ def cleanup_old_reports():
         import time
         cutoff = time.time() - (retention * 86400)
         deleted = 0
-        for fpath in glob.glob(os.path.join(reports_dir, "*.json")):
+        for fpath in glob.glob(os.path.join(reports_dir, "*.json")) + glob.glob(os.path.join(reports_dir, "*.log")):
             if os.path.getmtime(fpath) < cutoff:
                 os.remove(fpath)
                 deleted += 1

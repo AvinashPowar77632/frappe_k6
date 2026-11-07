@@ -3,15 +3,22 @@ frappe_k6.api.api_tester
 Server-side proxy and persistence layer for the API Builder.
 """
 
+import base64
 import json
 import time
-import base64
-import urllib.request
 import urllib.error
 import urllib.parse
+import urllib.request
 
 import frappe
 
+from frappe_k6.security import (
+    decrypt_auth_config,
+    require_k6_manager,
+    require_k6_user,
+    safe_urlopen,
+    strip_auth_config,
+)
 
 # ──────────────────────────────────────────────────────────────────────────────
 # Helpers
@@ -59,6 +66,7 @@ def send_request(config_json):
       response_time_threshold_ms (int),
       assertions (list of {type,path,operator,value})
     """
+    require_k6_user()
     cfg = _parse(config_json, {})
 
     # ── Build variable map ───────────────────────────────────────────────────
@@ -176,7 +184,8 @@ def send_request(config_json):
 
     start_ts = time.time()
     try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
+        # Refuses private/internal targets (and redirects to them) unless allow-listed
+        with safe_urlopen(req, timeout=30) as resp:
             elapsed_ms  = int((time.time() - start_ts) * 1000)
             resp_body   = resp.read()
             resp_status = resp.status
@@ -186,6 +195,8 @@ def send_request(config_json):
         resp_body   = e.read() or b""
         resp_status = e.code
         resp_headers = dict(e.headers) if e.headers else {}
+    except frappe.PermissionError as exc:
+        return {"ok": False, "error": str(exc), "elapsed_ms": 0}
     except Exception as exc:
         return {"ok": False, "error": str(exc), "elapsed_ms": int((time.time() - start_ts) * 1000)}
 
@@ -287,6 +298,7 @@ def send_request(config_json):
 
 @frappe.whitelist()
 def get_collections():
+    require_k6_user()
     cols = frappe.get_all("API Collection",
         fields=["name", "collection_name", "description", "base_url"],
         order_by="collection_name asc")
@@ -297,6 +309,7 @@ def get_collections():
 
 @frappe.whitelist()
 def save_collection(name, collection_name, description="", base_url=""):
+    require_k6_user()
     if name and frappe.db.exists("API Collection", name):
         doc = frappe.get_doc("API Collection", name)
         doc.collection_name = collection_name
@@ -317,6 +330,7 @@ def save_collection(name, collection_name, description="", base_url=""):
 
 @frappe.whitelist()
 def delete_collection(name):
+    require_k6_user()
     frappe.db.delete("API Request", {"collection": name})
     frappe.delete_doc("API Collection", name, force=True)
     frappe.db.commit()
@@ -329,6 +343,7 @@ def delete_collection(name):
 
 @frappe.whitelist()
 def get_requests(collection=None):
+    require_k6_user()
     filters = {}
     if collection:
         filters["collection"] = collection
@@ -342,14 +357,18 @@ def get_requests(collection=None):
 
 @frappe.whitelist()
 def get_request(name):
+    require_k6_user()
     if not frappe.db.exists("API Request", name):
         return None
     doc = frappe.get_doc("API Request", name)
-    return doc.as_dict()
+    data = doc.as_dict()
+    data["auth_config_json"] = json.dumps(decrypt_auth_config(_parse(doc.auth_config_json, {})), indent=2)
+    return data
 
 
 @frappe.whitelist()
 def save_api_request(config_json):
+    require_k6_user()
     cfg = _parse(config_json, {})
     name = cfg.get("name")
     if name and frappe.db.exists("API Request", name):
@@ -386,6 +405,7 @@ def save_api_request(config_json):
 
 @frappe.whitelist()
 def delete_api_request(name):
+    require_k6_user()
     frappe.delete_doc("API Request", name, force=True)
     frappe.db.commit()
     return True
@@ -393,6 +413,7 @@ def delete_api_request(name):
 
 @frappe.whitelist()
 def duplicate_api_request(name):
+    require_k6_user()
     src = frappe.get_doc("API Request", name)
     new_doc = frappe.copy_doc(src)
     new_doc.request_name = src.request_name + " (Copy)"
@@ -413,6 +434,7 @@ def add_to_load_test(request_name_or_config, config_name=None):
     Creates a new Load Test Config if config_name is None or blank.
     Returns the Load Test Config name.
     """
+    require_k6_manager()
     cfg = _parse(request_name_or_config)
     if cfg is None:
         # It's a doc name, not inline JSON
@@ -422,7 +444,7 @@ def add_to_load_test(request_name_or_config, config_name=None):
             "method":       doc.method,
             "url":          doc.url,
             "auth_type":    doc.auth_type,
-            "auth_config":  _parse(doc.auth_config_json, {}),
+            "auth_config":  decrypt_auth_config(_parse(doc.auth_config_json, {})),
             "headers":      _parse(doc.headers_json, []),
             "params":       _parse(doc.params_json, []),
             "body_type":    doc.body_type,
@@ -488,6 +510,7 @@ def add_to_load_test(request_name_or_config, config_name=None):
 
 @frappe.whitelist()
 def get_load_test_configs():
+    require_k6_user()
     return frappe.get_all("Load Test Config",
         fields=["name", "test_name", "scenario_type", "status"],
         order_by="test_name asc")
@@ -500,18 +523,23 @@ def get_load_test_configs():
 @frappe.whitelist()
 def export_collection(collection_name):
     """Return full collection + requests as a JSON dict (for download)."""
+    require_k6_user()
     if not frappe.db.exists("API Collection", collection_name):
         frappe.throw("Collection not found")
     col = frappe.get_doc("API Collection", collection_name)
     requests = frappe.get_all("API Request",
         filters={"collection": collection_name},
         fields=["*"])
+    # Secrets are encrypted with this site's key and must not leave the site
+    for r in requests:
+        r["auth_config_json"] = json.dumps(strip_auth_config(_parse(r.get("auth_config_json"), {})), indent=2)
     return {"collection": col.as_dict(), "requests": requests}
 
 
 @frappe.whitelist()
 def import_collection(json_data):
     """Import a collection + requests from exported JSON."""
+    require_k6_user()
     data = _parse(json_data, {})
     col_data  = data.get("collection", {})
     reqs_data = data.get("requests", [])
