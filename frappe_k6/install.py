@@ -56,7 +56,6 @@ def after_install():
     from frappe_k6.security import ensure_roles
 
     ensure_roles()
-    _setup_slow_query_log()
     _setup_reports_dir()
     try:
         from frappe_k6.alerts import ensure_default_rules
@@ -185,36 +184,6 @@ def _configure_basic_settings():
 
     ensure_default_cloud_rules(s)
     s.save(ignore_permissions=True)
-
-
-def _setup_slow_query_log():
-    """
-    Set up Slow Query Log doctype and default settings.
-    """
-    # Ensure Slow Query Log doctype exists
-    if not frappe.db.exists("DocType", "Slow Query Log"):
-        frappe.get_doc({
-            "doctype": "DocType",
-            "name": "Slow Query Log",
-            "document_type": "System",
-            "engine": "InnoDB",
-            "fields": [
-                {"fieldname": "timestamp", "fieldtype": "Datetime", "label": "Timestamp"},
-                {"fieldname": "query_text", "fieldtype": "Long Text", "label": "Query Text"},
-                {"fieldname": "execution_time", "fieldtype": "Float", "label": "Execution Time (seconds)", "default": "0.00"},
-                {"fieldname": "seen", "fieldtype": "Check", "label": "Seen", "default": "0", "hidden": 1},
-            ],
-            "icon": "fa fa-hourglass",
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
-
-    # Set default for enable_slow_query_logging if not already set
-    if not frappe.db.exists("System Settings", "enable_slow_query_logging"):
-        frappe.get_doc({
-            "doctype": "System Settings",
-            "enable_slow_query_logging": 1,
-        }).insert(ignore_permissions=True)
-        frappe.db.commit()
 
 
 def _configure_stack_settings(server_ip):

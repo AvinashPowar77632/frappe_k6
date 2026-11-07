@@ -45,6 +45,10 @@
   "alert_webhook_url",
   "section_cloud_rules",
   "cloud_alert_rules",
+  "section_slow_query",
+  "enable_slow_query_log",
+  "column_break_sq",
+  "slow_query_threshold",
   "section_k6",
   "k6_binary_path",
   "k6_reports_dir"
@@ -285,6 +289,32 @@
    "description": "Synced to Grafana Cloud by Connect & Migrate or Sync Alert Rules"
   },
   {
+   "collapsible": 1,
+   "fieldname": "section_slow_query",
+   "fieldtype": "Section Break",
+   "label": "Slow Query Log"
+  },
+  {
+   "default": "0",
+   "description": "Record every database query slower than the threshold into Slow Query Log (flushed every minute).",
+   "fieldname": "enable_slow_query_log",
+   "fieldtype": "Check",
+   "label": "Enable Slow Query Log"
+  },
+  {
+   "fieldname": "column_break_sq",
+   "fieldtype": "Column Break"
+  },
+  {
+   "default": "1",
+   "depends_on": "enable_slow_query_log",
+   "description": "In seconds. Retention is set in Log Settings (default 7 days).",
+   "fieldname": "slow_query_threshold",
+   "fieldtype": "Float",
+   "label": "Slow Query Threshold (seconds)",
+   "non_negative": 1
+  },
+  {
    "fieldname": "section_k6",
    "fieldtype": "Section Break",
    "label": "k6 Settings"
@@ -303,7 +333,7 @@
  ],
  "issingle": 1,
  "links": [],
- "modified": "2026-10-30 18:00:00.000000",
+ "modified": "2026-11-07 15:00:00.000000",
  "modified_by": "Administrator",
  "module": "Frappe K6",
  "name": "Monitor Settings",

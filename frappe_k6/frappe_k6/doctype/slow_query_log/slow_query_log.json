@@ -1,0 +1,117 @@
+{
+ "actions": [],
+ "autoname": "hash",
+ "creation": "2026-11-07 12:00:00",
+ "doctype": "DocType",
+ "document_type": "System",
+ "engine": "InnoDB",
+ "field_order": [
+  "timestamp",
+  "execution_time",
+  "query_type",
+  "column_break_ctx",
+  "source",
+  "user",
+  "section_query",
+  "query_text",
+  "seen"
+ ],
+ "fields": [
+  {
+   "fieldname": "timestamp",
+   "fieldtype": "Datetime",
+   "in_list_view": 1,
+   "label": "Timestamp",
+   "read_only": 1,
+   "search_index": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "execution_time",
+   "fieldtype": "Float",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Execution Time (seconds)",
+   "precision": "3",
+   "read_only": 1
+  },
+  {
+   "fieldname": "query_type",
+   "fieldtype": "Data",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Query Type",
+   "read_only": 1
+  },
+  {
+   "fieldname": "column_break_ctx",
+   "fieldtype": "Column Break"
+  },
+  {
+   "description": "Request path or background job method that ran the query",
+   "fieldname": "source",
+   "fieldtype": "Data",
+   "in_standard_filter": 1,
+   "label": "Source",
+   "read_only": 1
+  },
+  {
+   "fieldname": "user",
+   "fieldtype": "Link",
+   "in_standard_filter": 1,
+   "label": "User",
+   "options": "User",
+   "read_only": 1
+  },
+  {
+   "fieldname": "section_query",
+   "fieldtype": "Section Break",
+   "label": "Query"
+  },
+  {
+   "fieldname": "query_text",
+   "fieldtype": "Code",
+   "label": "Query Text",
+   "options": "SQL",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "seen",
+   "fieldtype": "Check",
+   "hidden": 1,
+   "label": "Seen"
+  }
+ ],
+ "icon": "fa fa-hourglass",
+ "in_create": 1,
+ "links": [],
+ "modified": "2026-11-07 15:00:00.000000",
+ "modified_by": "Administrator",
+ "module": "Frappe K6",
+ "name": "Slow Query Log",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "delete": 1,
+   "email": 1,
+   "export": 1,
+   "print": 1,
+   "read": 1,
+   "report": 1,
+   "role": "System Manager",
+   "share": 1
+  },
+  {
+   "delete": 1,
+   "export": 1,
+   "read": 1,
+   "report": 1,
+   "role": "K6 Manager"
+  }
+ ],
+ "sort_field": "timestamp",
+ "sort_order": "DESC",
+ "states": [],
+ "title_field": "query_type"
+}

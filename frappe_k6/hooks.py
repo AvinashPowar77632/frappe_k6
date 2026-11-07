@@ -42,8 +42,18 @@ scheduler_events = {
         # Grafana Cloud mode: push Frappe metrics every minute (no agent needed)
         "* * * * *": [
             "frappe_k6.grafana_cloud.push_system_metrics",
+            "frappe_k6.slow_query.flush_slow_queries",
         ],
     },
+}
+
+# Slow Query Log: time every frappe.db.sql call while enabled in Monitor Settings
+before_request = ["frappe_k6.slow_query.on_request_start"]
+before_job = ["frappe_k6.slow_query.on_job_start"]
+
+# Retention for Slow Query Log (editable in Log Settings)
+default_log_clearing_doctypes = {
+    "Slow Query Log": 7,
 }
 
 # Apps
